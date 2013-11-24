@@ -59,10 +59,10 @@ Com_Zimbra_PGP.prototype.match = function(line, startIndex) {
     }
     if (header) {
         if (this.getUserProperty("ZimbraPGP_firstRun") == "false") {
-            alert('Not first run!');
+            //alert('Not first run!');
         } else {
             this.setUserProperty("ZimbraPGP_firstRun","false",true);
-            alert('First run detected!')
+            //alert('First run detected!')
             /*
                Do first run things 
             */
@@ -84,7 +84,8 @@ Com_Zimbra_PGP.prototype.infoBar = function() {
         window._HTML5 = false;
     }
 	// Find our infoDiv
-	this._infoDiv = document.getElementById(appCtxt.getCurrentView()._msgView._infoBarId);
+	// this._infoDiv = document.getElementById(appCtxt.getCurrentView()._msgView._infoBarId);
+	this._infoDiv = document.getElementById(ZmId.getViewId(ZmId.VIEW_MSG, ZmId.MV_INFO_BAR, ZmId.VIEW_MSG));
 	if (this.alreadyVerified(appCtxt.getCurrentView()._msgView._msg.id)) {
 		var status;
 		var msgHTML = this.getFromTempCache(appCtxt.getCurrentView()._msgView._msg.id);
@@ -168,7 +169,8 @@ Com_Zimbra_PGP.prototype.infoBar = function() {
 */
 Com_Zimbra_PGP.prototype.destroyInfoBar = function() {
     // Find our infoDiv
-    this._infoDiv = document.getElementById(appCtxt.getCurrentView()._msgView._infoBarId);
+    //this._infoDiv = document.getElementById(appCtxt.getCurrentView()._msgView._infoBarId);
+	this._infoDiv = document.getElementById(ZmId.getViewId(ZmId.VIEW_MSG, ZmId.MV_INFO_BAR, ZmId.VIEW_MSG));
     this._infoDiv.innerHTML = "";
 };
 
@@ -178,7 +180,8 @@ Com_Zimbra_PGP.prototype.destroyInfoBar = function() {
 */
 Com_Zimbra_PGP.prototype.searchForKey = function() {
     // Find our infoDiv
-    this._infoDiv = document.getElementById(appCtxt.getCurrentView()._msgView._infoBarId);
+    //this._infoDiv = document.getElementById(appCtxt.getCurrentView()._msgView._infoBarId);
+	this._infoDiv = document.getElementById(ZmId.getViewId(ZmId.VIEW_MSG, ZmId.MV_INFO_BAR, ZmId.VIEW_MSG));
     
     // If this key is found in the cache
     if (this.isInCache(this._infoDiv.sigObj.keyid)) {
@@ -419,11 +422,13 @@ Com_Zimbra_PGP.prototype.askSearch = function() {
 */
 Com_Zimbra_PGP.prototype._searchBtnListener = function(obj){
     // Find our infoDiv
-    this._infoDiv = document.getElementById(appCtxt.getCurrentView()._msgView._infoBarId);
+    //this._infoDiv = document.getElementById(appCtxt.getCurrentView()._msgView._infoBarId);
+	this._infoDiv = document.getElementById(ZmId.getViewId(ZmId.VIEW_MSG, ZmId.MV_INFO_BAR, ZmId.VIEW_MSG));
     // Clear our popup
     this._dialog.popdown();
     // Get our infoDiv location
-    this._infoDiv = document.getElementById(appCtxt.getCurrentView()._msgView._infoBarId);
+    //this._infoDiv = document.getElementById(appCtxt.getCurrentView()._msgView._infoBarId);
+	this._infoDiv = document.getElementById(ZmId.getViewId(ZmId.VIEW_MSG, ZmId.MV_INFO_BAR, ZmId.VIEW_MSG));
     // Create a new temporary div to populate with our response so we can navigate it easier, and hide it.
     var temp_div = document.createElement('div');
     // Talk to the JSP page to lookup the keyid parsed from the signature
@@ -471,7 +476,8 @@ Com_Zimbra_PGP.prototype.askManualEntry = function(obj){
 */
 Com_Zimbra_PGP.prototype.msgVerify = function(keytext){
     // Find our infoDiv
-    this._infoDiv = document.getElementById(appCtxt.getCurrentView()._msgView._infoBarId);
+   // this._infoDiv = document.getElementById(appCtxt.getCurrentView()._msgView._infoBarId);
+	this._infoDiv = document.getElementById(ZmId.getViewId(ZmId.VIEW_MSG, ZmId.MV_INFO_BAR, ZmId.VIEW_MSG));
     var msghash = '';
     var verified = false;
     var key = new publicKey(keytext);
@@ -587,7 +593,8 @@ Com_Zimbra_PGP.prototype._clrBtnListener = function(){
 };
 
 Com_Zimbra_PGP.prototype._readKeyListener = function(){
-    this._infoDiv = document.getElementById(appCtxt.getCurrentView()._msgView._infoBarId);
+    //this._infoDiv = document.getElementById(appCtxt.getCurrentView()._msgView._infoBarId);
+	this._infoDiv = document.getElementById(ZmId.getViewId(ZmId.VIEW_MSG, ZmId.MV_INFO_BAR, ZmId.VIEW_MSG));
     this._dialog.popdown();
     // Get our key pasted in, and clear our the entry in the DOM
     var pgpKey = document.getElementById('keyEntryTextarea').value;
