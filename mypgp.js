@@ -25,7 +25,7 @@ http://www.rfc-ref.org/RFC-TEXTS/2440/chapter5.html
 
 */
 
-debug = false
+debug = true;
 
 function dec2hex(d) {
     var hex = Number(d).toString(16);
@@ -80,142 +80,227 @@ function parseText(text) {
 // Parse out the signature part of our message for concatination with our msg text
 function parseSig(text) {
     var stuffs = text.replace(/\r/g,'');
-    stuffs = stuffs.replace(/^Version.*\n$/m, '');
-    start  = stuffs.indexOf('-----BEGIN PGP SIGNATURE-----\n\n') + 31;
-    end    = stuffs.search(/\n=.*\n-----END PGP SIGNATURE-----$/);
-    sig = stuffs.slice(start,end);
+    stuffs = stuffs.replace(/^Version:.*$\n/m, '');
+    stuffs = stuffs.replace(/^Comment:.*$\n/m, '');
+    var start  = stuffs.indexOf('-----BEGIN PGP SIGNATURE-----\n\n') + 31;
+    var end    = stuffs.search(/\n=.*\n-----END PGP SIGNATURE-----$/m);
+    var sig = stuffs.slice(start,end);
     var sigdecoded = r2s(sig);
 
-    for (i=0;i<sigdecoded.length;i++) {
-        // Poor mans skip of the first 2-3 bytes
-        if (dec2hex(sigdecoded.charCodeAt(i)) == '04') {
-            // Packet stuffs
-            version = dec2hex(sigdecoded.charCodeAt(i++))
-            sigtype = dec2hex(sigdecoded.charCodeAt(i++))
-            pubalg  = dec2hex(sigdecoded.charCodeAt(i++))
-            hashalg = dec2hex(sigdecoded.charCodeAt(i++))
-            size1   = sigdecoded.charCodeAt(i++)
-            size2   = sigdecoded.charCodeAt(i++)
+    for (i=0; i < sigdecoded.length; ) {
+        // Decode CTB
+        var ctb = sigdecoded.charCodeAt(i++);
+        var packetType = 0;
+        var packetLength = 0;
 
-            // Figure out how big everything is
-            sizetotal = ((size1<<8) + (size2)) 
+        if ((ctb & 0xC0) == 0x80) {
+            // Old style packet
+            packetType = (ctb & 0x3C) >> 2;
+            var packetLengthLength = 1 << (ctb & 0x03);
 
-            // Loop over any hashed bytes and push each packet type into
-            // an array
-            var ar = new Array();
-            for (b=0;b<sizetotal;b++) {
-                psize   = dec2hex(sigdecoded.charCodeAt(i++))
-                ar.push(psize)
+            if (packetLengthLength != 8) {
+                packetLength = sigdecoded.charCodeAt(i++);
+
+                if (packetLengthLength > 1) {
+                    packetLength <<= 8;
+                    packetLength += sigdecoded.charCodeAt(i++);
+
+                    if (packetLengthLength > 2) {
+                        packetLength <<= 8;
+                        packetLength += sigdecoded.charCodeAt(i++);
+
+                        packetLength <<= 8;
+                        packetLength += sigdecoded.charCodeAt(i++);
+                    }
+                }
+            }
+        } else if ((ctb & 0xC0) == 0xC0) {
+            // New style packet
+            packetType = ctb & 0x3F;
+            packetLength = sigdecoded.charCodeAt(i++);
+
+            if (packetLength == 255) {
+                packetLength = sigdecoded.charCodeAt(i++);
+
+                packetLength <<= 8;
+                packetLength += sigdecoded.charCodeAt(i++);
+
+                packetLength <<= 8;
+                packetLength += sigdecoded.charCodeAt(i++);
+
+                packetLength <<= 8;
+                packetLength += sigdecoded.charCodeAt(i++);
+            } else if (packetLength > 223) {
+                packetLength = 1 << (packetLength & 0x1f);
+            } else if (packetLength > 191) {
+                packetLength = (packetLength - 192) << 8;
+                packetLength += sigdecoded.charCodeAt(i++) + 192;
+            }
+        } else {
+            alert('Not a normal CTB');
+        }
+
+        switch (packetType) {
+            case 1:     // Public-Key Encrypted Session Key
+                break;
+            case 2:     // Signature
+                processSignature(sigdecoded.substr(i, packetLength), this);
+                break;
+            case 3:     // Symmetric-Key Encrypted Session Key
+                break;
+            case 4:     // One-Pass Signature
+                break;
+            case 5:     // Secret Key
+                break;
+            case 6:     // Public Key
+                break;
+            case 7:     // Secret Subkey
+                break;
+            case 8:     // Compressed Data
+                break;
+            case 9:     // Symmetrically Encrypted Data
+                break;
+            case 10:    // Marker
+                break;
+            case 11:    // Literal Data
+                break;
+            case 12:    // Trust
+                break;
+            case 13:    // User ID
+                break;
+            case 14:    // Public Subkey
+                break;
+            default:    // reserved
+                break;
+        }
+
+        i += packetLength;
+    }
+}
+
+// MAAAAAAAATH 
+function processSignature(sigdecoded, sig) {
+	
+    var i = 0;
+
+    if (dec2hex(sigdecoded.charCodeAt(i)) == '04') {
+        // Packet stuffs
+        version = dec2hex(sigdecoded.charCodeAt(i++))
+        sigtype = dec2hex(sigdecoded.charCodeAt(i++))
+        pubalg  = dec2hex(sigdecoded.charCodeAt(i++))
+        hashalg = dec2hex(sigdecoded.charCodeAt(i++))
+        size1   = sigdecoded.charCodeAt(i++)
+        size2   = sigdecoded.charCodeAt(i++)
+
+        // Figure out how big everything is
+        sizetotal = ((size1<<8) + (size2)) 
+
+        // Loop over any hashed bytes and push each packet type into
+        // an array
+        var ar = new Array();
+        for (b=0;b<sizetotal;b++) {
+            psize   = dec2hex(sigdecoded.charCodeAt(i++))
+            ar.push(psize)
+            for (c=0;c<psize;c++) {
+                ar.push(dec2hex(sigdecoded.charCodeAt(i++)));
+                b++
+            }
+        }
+
+        // Update for previous bytes
+        sizetotal += 6
+
+        // Pad bytes properly
+        sizetotal = dec2hex(sizetotal);
+        sizetotal = '00000000'.substr(0, 8 - sizetotal.length);
+
+        // Add all hashed bytes to a long string, and parse properly
+        hpacket = ''    
+        for (d=0;d<ar.length;d++) {
+            hpacket += String.fromCharCode(parseInt(ar[d],16))
+        }
+
+        // Build our header string to be thrown into SHA256()
+        // Also BWAHAHA I ARE MIGHTIER THEN THE HASHING ALGORITHM!
+        sig.header = String.fromCharCode(parseInt(version,16)) +
+                 String.fromCharCode(parseInt(sigtype,16)) +
+                 String.fromCharCode(parseInt(pubalg,16)) +
+                 String.fromCharCode(parseInt(hashalg,16)) +
+                 String.fromCharCode(parseInt(dec2hex(size1),16)) +
+                 String.fromCharCode(parseInt(dec2hex(size2),16)) +
+                 hpacket + 
+                 // I belive these are static values for v4 keys
+                 String.fromCharCode(parseInt('04',16)) +
+                 String.fromCharCode(parseInt('ff',16)) +
+                 // Last 4 bytes are the size of the entire header
+                 String.fromCharCode(parseInt(sizetotal.substr(0,2),16)) +
+                 String.fromCharCode(parseInt(sizetotal.substr(2,2),16)) +
+                 String.fromCharCode(parseInt(sizetotal.substr(4,2),16)) +
+                 String.fromCharCode(parseInt(sizetotal.substr(6,2),16))
+
+        // Calculate our unhashed total packet size, and skip it
+        // Usually a key id, maybe other info we shouldn't really trust. Big freaking deal.
+        size1 = sigdecoded.charCodeAt(i++)
+        size2 = sigdecoded.charCodeAt(i++)
+        sizetotal = ((size1<<8) + (size2))
+        // Loop over any hashed bytes and push each packet type into
+        // an array
+        var ar = new Array();
+        for (b=0;b<sizetotal;b++) {
+            psize   = dec2hex(sigdecoded.charCodeAt(i++))
+            //ar.push(psize)
+            // If we found a keyid
+            if (dec2hex(sigdecoded.charCodeAt(i++)) == 10 ) {
                 for (c=0;c<psize;c++) {
                     ar.push(dec2hex(sigdecoded.charCodeAt(i++)));
                     b++
                 }
+                i = i-1
+                ar.pop()
             }
-
-            // Update for previous bytes
-            sizetotal += 6
-
-            // Pad bytes properly
-            if (sizetotal < 255) {
-                sizetotal = '000000' + String(dec2hex(sizetotal));
-            } else if (sizetotal > 256 && sizetotal < 65534) {
-                a = '0000' + String(dec2hex(sizetotal));
-            } else if (sizetotal > 65535 && sizetotal < 16777215) {
-                a = '00' + String(dec2hex(sizetotal));
-            } else if (sizetotal > 16777216) {
-                a = String(dec2hex(sizetotal));
-            }
-
-            // Add all hashed bytes to a long string, and parse properly
-            hpacket = ''    
-            for (d=0;d<ar.length;d++) {
-                hpacket += String.fromCharCode(parseInt(ar[d],16))
-            }
-
-            // Build our header string to be thrown into SHA256()
-            // Also BWAHAHA I ARE MIGHTIER THEN THE HASHING ALGORITHM!
-            this.header = String.fromCharCode(parseInt(version,16)) +
-                     String.fromCharCode(parseInt(sigtype,16)) +
-                     String.fromCharCode(parseInt(pubalg,16)) +
-                     String.fromCharCode(parseInt(hashalg,16)) +
-                     String.fromCharCode(parseInt(dec2hex(size1),16)) +
-                     String.fromCharCode(parseInt(dec2hex(size2),16)) +
-                     hpacket + 
-                     // I belive these are static values for v4 keys
-                     String.fromCharCode(parseInt('04',16)) +
-                     String.fromCharCode(parseInt('ff',16)) +
-                     // Last 4 bytes are the size of the entire header
-                     String.fromCharCode(parseInt(sizetotal.substr(0,2),16)) +
-                     String.fromCharCode(parseInt(sizetotal.substr(2,2),16)) +
-                     String.fromCharCode(parseInt(sizetotal.substr(4,2),16)) +
-                     String.fromCharCode(parseInt(sizetotal.substr(6,2),16))
-
-            // Calculate our unhashed total packet size, and skip it
-            // Usually a key id, maybe other info we shouldn't really trust. Big freaking deal.
-            size1 = sigdecoded.charCodeAt(i++)
-            size2 = sigdecoded.charCodeAt(i++)
-            sizetotal = ((size1<<8) + (size2))
-            // Loop over any hashed bytes and push each packet type into
-            // an array
-            var ar = new Array();
-            for (b=0;b<sizetotal;b++) {
-                psize   = dec2hex(sigdecoded.charCodeAt(i++))
-                //ar.push(psize)
-                // If we found a keyid
-                if (dec2hex(sigdecoded.charCodeAt(i++)) == 10 ) {
-                    for (c=0;c<psize;c++) {
-                        ar.push(dec2hex(sigdecoded.charCodeAt(i++)));
-                        b++
-                    }
-                    i = i-1
-                    ar.pop()
-                }
-            }
-            this.keyid = '0x' + ar.toString().replace(/,/g,"")
-            // CRC values (left-most 2 bytes of the hash)
-            CRC1 = dec2hex(sigdecoded.charCodeAt(i++));
-            CRC2 = dec2hex(sigdecoded.charCodeAt(i++));
-            this.CRC = CRC1 + CRC2;
-            (debug) && console.log('CRC => ' + CRC)
-			
-			// DSA
-            if (pubalg == 11) {
-                primes = ['r','s'];
-                a = {};
-                a['r'] = "";
-                a['s'] = "";
-                i -= 1
-                for (c=0;c<primes.length;c++){
-                    size = Math.floor((sigdecoded.charCodeAt(++i) * 256 + sigdecoded.charCodeAt(i + 1) + 7) / 8) 
-                    for (b=0;b<size;b++) {
-                        a[primes[c]] += String(dec2hex(sigdecoded.charCodeAt(i + b + 2)));
-                    }
-                    a[primes[c]] = a[primes[c]].split(' ')
-                    i += (size +1)
-                }
-                this.algorithm = 'DSA';
-                this.dsaR = new BigInteger(a['r'].toString(),16)
-                this.dsaS = new BigInteger(a['s'].toString(),16)
-                this.keyLength = this.dsaR.toString(16).length * 32;
-			// RSA
-            } else if (sigtype == 01) {
-                a = {};
-                a['z'] = ""
-                i -= 1
-                size = Math.floor((sigdecoded.charCodeAt(++i) * 256 + sigdecoded.charCodeAt(i + 1) + 7) / 8)   
+        }
+        sig.keyid = '0x' + ar.toString().replace(/,/g,"")
+        // CRC values (left-most 2 bytes of the hash)
+        CRC1 = dec2hex(sigdecoded.charCodeAt(i++));
+        CRC2 = dec2hex(sigdecoded.charCodeAt(i++));
+        sig.CRC = CRC1 + CRC2;
+        (debug) && console.log('CRC => ' + sig.CRC)
+        
+        // DSA
+        if (pubalg == 11) {
+            primes = ['r','s'];
+            a = {};
+            a['r'] = "";
+            a['s'] = "";
+            i -= 1
+            for (c=0;c<primes.length;c++){
+                size = Math.floor((sigdecoded.charCodeAt(++i) * 256 + sigdecoded.charCodeAt(i + 1) + 7) / 8) 
                 for (b=0;b<size;b++) {
-                    a['z'] += String(dec2hex(sigdecoded.charCodeAt(i + b + 2)));
+                    a[primes[c]] += String(dec2hex(sigdecoded.charCodeAt(i + b + 2)));
                 }
-                a['z'] = a['z'].split(' ')
-                i += (size +1) 
-                this.algorithm = 'RSA';
-                this.rsaZ = new BigInteger(a['z'].toString(),16)
-                this.keyLength = this.rsaZ.toString(16).length * 4;
-            } else {
-                //error
+                a[primes[c]] = a[primes[c]].split(' ')
+                i += (size +1)
             }
-            // Break after we get the info we need
-            break
+            sig.algorithm = 'DSA';
+            sig.dsaR = new BigInteger(a['r'].toString(),16)
+            sig.dsaS = new BigInteger(a['s'].toString(),16)
+            sig.keyLength = sig.dsaR.toString(16).length * 32;
+        // RSA
+        } else if (sigtype == 01) {
+            a = {};
+            a['z'] = ""
+            i -= 1
+            size = Math.floor((sigdecoded.charCodeAt(++i) * 256 + sigdecoded.charCodeAt(i + 1) + 7) / 8)   
+            for (b=0;b<size;b++) {
+                a['z'] += String(dec2hex(sigdecoded.charCodeAt(i + b + 2)));
+            }
+            a['z'] = a['z'].split(' ')
+            i += (size +1) 
+            sig.algorithm = 'RSA';
+            sig.rsaZ = new BigInteger(a['z'].toString(),16)
+            sig.keyLength = sig.rsaZ.toString(16).length * 4;
+        } else {
+            //error
         }
     }
 }
@@ -285,7 +370,7 @@ function publicKey(key) {
     // Then verify that we chmop everything between start and end
     key = key.replace(/^Version.*\n$/m, '')
     start = key.indexOf('-----BEGIN PGP PUBLIC KEY BLOCK-----\n\n') + 38;
-    end = key.search(/\n=.*\n-----END PGP PUBLIC KEY BLOCK-----/);
+    end = key.search(/\n=.*\n-----END PGP PUBLIC KEY BLOCK-----/m);
 
     // Slice our key out
     key = key.slice(start,end);

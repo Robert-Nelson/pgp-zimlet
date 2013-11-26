@@ -84,11 +84,10 @@ Com_Zimbra_PGP.prototype.infoBar = function() {
         window._HTML5 = false;
     }
 	// Find our infoDiv
-	// this._infoDiv = document.getElementById(appCtxt.getCurrentView()._msgView._infoBarId);
-	this._infoDiv = document.getElementById(ZmId.getViewId(ZmId.VIEW_MSG, ZmId.MV_INFO_BAR, ZmId.VIEW_MSG));
-	if (this.alreadyVerified(appCtxt.getCurrentView()._msgView._msg.id)) {
+	this._infoDiv = document.getElementById(appCtxt.getCurrentView()._mailMsgView._infoBarId);
+	if (this.alreadyVerified(appCtxt.getCurrentView()._mailMsgView._msg.id)) {
 		var status;
-		var msgHTML = this.getFromTempCache(appCtxt.getCurrentView()._msgView._msg.id);
+		var msgHTML = this.getFromTempCache(appCtxt.getCurrentView()._mailMsgView._msg.id);
 		if (msgHTML.search('successfully') != -1) {
 			status = "success";
 		} else {
@@ -124,11 +123,11 @@ Com_Zimbra_PGP.prototype.infoBar = function() {
 		this._infoDiv.innerHTML = HTML;
 	} else {	
 		// Find the message that we're clicked on.
-		var msgText = appCtxt.getCurrentView()._msgView._msg.getBodyPart();
+		var msgText = appCtxt.getCurrentView()._mailMsgView._msg.getBodyPart();
 
 		// Parse out our signature stuff and message text
-		this._infoDiv.sigObj = new parseSig(msgText.content);
-		this._infoDiv.txtObj = new parseText(msgText.content);
+		this._infoDiv.sigObj = new parseSig(msgText.node.content);
+		this._infoDiv.txtObj = new parseText(msgText.node.content);
 
 		// Inject HTML into the infobar section 
 		var HTML = '' +
@@ -169,8 +168,7 @@ Com_Zimbra_PGP.prototype.infoBar = function() {
 */
 Com_Zimbra_PGP.prototype.destroyInfoBar = function() {
     // Find our infoDiv
-    //this._infoDiv = document.getElementById(appCtxt.getCurrentView()._msgView._infoBarId);
-	this._infoDiv = document.getElementById(ZmId.getViewId(ZmId.VIEW_MSG, ZmId.MV_INFO_BAR, ZmId.VIEW_MSG));
+    this._infoDiv = document.getElementById(appCtxt.getCurrentView()._mailMsgView._infoBarId);
     this._infoDiv.innerHTML = "";
 };
 
@@ -180,8 +178,7 @@ Com_Zimbra_PGP.prototype.destroyInfoBar = function() {
 */
 Com_Zimbra_PGP.prototype.searchForKey = function() {
     // Find our infoDiv
-    //this._infoDiv = document.getElementById(appCtxt.getCurrentView()._msgView._infoBarId);
-	this._infoDiv = document.getElementById(ZmId.getViewId(ZmId.VIEW_MSG, ZmId.MV_INFO_BAR, ZmId.VIEW_MSG));
+    this._infoDiv = document.getElementById(appCtxt.getCurrentView()._mailMsgView._infoBarId);
     
     // If this key is found in the cache
     if (this.isInCache(this._infoDiv.sigObj.keyid)) {
@@ -422,13 +419,11 @@ Com_Zimbra_PGP.prototype.askSearch = function() {
 */
 Com_Zimbra_PGP.prototype._searchBtnListener = function(obj){
     // Find our infoDiv
-    //this._infoDiv = document.getElementById(appCtxt.getCurrentView()._msgView._infoBarId);
-	this._infoDiv = document.getElementById(ZmId.getViewId(ZmId.VIEW_MSG, ZmId.MV_INFO_BAR, ZmId.VIEW_MSG));
+    this._infoDiv = document.getElementById(appCtxt.getCurrentView()._mailMsgView._infoBarId);
     // Clear our popup
     this._dialog.popdown();
     // Get our infoDiv location
-    //this._infoDiv = document.getElementById(appCtxt.getCurrentView()._msgView._infoBarId);
-	this._infoDiv = document.getElementById(ZmId.getViewId(ZmId.VIEW_MSG, ZmId.MV_INFO_BAR, ZmId.VIEW_MSG));
+    this._infoDiv = document.getElementById(appCtxt.getCurrentView()._mailMsgView._infoBarId);
     // Create a new temporary div to populate with our response so we can navigate it easier, and hide it.
     var temp_div = document.createElement('div');
     // Talk to the JSP page to lookup the keyid parsed from the signature
@@ -476,8 +471,7 @@ Com_Zimbra_PGP.prototype.askManualEntry = function(obj){
 */
 Com_Zimbra_PGP.prototype.msgVerify = function(keytext){
     // Find our infoDiv
-   // this._infoDiv = document.getElementById(appCtxt.getCurrentView()._msgView._infoBarId);
-	this._infoDiv = document.getElementById(ZmId.getViewId(ZmId.VIEW_MSG, ZmId.MV_INFO_BAR, ZmId.VIEW_MSG));
+    this._infoDiv = document.getElementById(appCtxt.getCurrentView()._mailMsgView._infoBarId);
     var msghash = '';
     var verified = false;
     var key = new publicKey(keytext);
@@ -487,7 +481,7 @@ Com_Zimbra_PGP.prototype.msgVerify = function(keytext){
     // Hash our message out, and 
     if (text.hash == "SHA256") {
         msghash = SHA256(this._infoDiv.txtObj.msg + this._infoDiv.sigObj.header);
-    } else if (text.hash == "SHA-1") {
+    } else if (text.hash == "SHA-1" || text.hash == "SHA1") {
         msghash = SHA1(this._infoDiv.txtObj.msg + this._infoDiv.sigObj.header);
     } else if (text.hash == "MD5") {
         msghash = MD5(this._infoDiv.txtObj.msg + this._infoDiv.sigObj.header);
@@ -549,7 +543,7 @@ Com_Zimbra_PGP.prototype.successBar = function(id,user,type){
     user = user.replace('<','&lt;').replace('>','&gt;');
     successMsg = "Message signed with <strong>" + type + "</strong> keyid : <strong>" + id + "</strong> and user : <strong>" + user + "</strong> verified successfully!";
     document.getElementById('infoBarMsg').innerHTML = successMsg;
-	msgId = appCtxt.getCurrentView()._msgView._msg.id
+	msgId = appCtxt.getCurrentView()._mailMsgView._msg.id
 	this.storeInTempCache(msgId,successMsg)
 };
 
@@ -558,7 +552,7 @@ Com_Zimbra_PGP.prototype.failBar = function(id,user,type){
     user = user.replace('<','&lt;').replace('>','&gt;');
     failMsg = "Message signed with <strong>" + type + "</strong> keyid : <strong>" + id + "</strong> and user : <strong>" + user + " *NOT*</strong> verified!";
     document.getElementById('infoBarMsg').innerHTML = failMsg;
-	msgId = appCtxt.getCurrentView()._msgView._msg.id
+	msgId = appCtxt.getCurrentView()._mailMsgView._msg.id
 	this.storeInTempCache(msgId,failMsg)
 };
 
@@ -593,8 +587,7 @@ Com_Zimbra_PGP.prototype._clrBtnListener = function(){
 };
 
 Com_Zimbra_PGP.prototype._readKeyListener = function(){
-    //this._infoDiv = document.getElementById(appCtxt.getCurrentView()._msgView._infoBarId);
-	this._infoDiv = document.getElementById(ZmId.getViewId(ZmId.VIEW_MSG, ZmId.MV_INFO_BAR, ZmId.VIEW_MSG));
+    this._infoDiv = document.getElementById(appCtxt.getCurrentView()._mailMsgView._infoBarId);
     this._dialog.popdown();
     // Get our key pasted in, and clear our the entry in the DOM
     var pgpKey = document.getElementById('keyEntryTextarea').value;
