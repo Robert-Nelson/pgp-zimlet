@@ -6,13 +6,9 @@
                 and keep them secure!
         </summary>
 
-        <include>base64.js</include>
-        <include>jsbn.js</include>
-        <include>jsbn2.js</include>
-        <include>md5.js</include>
-        <include>mypgp.js</include>
-        <include>sha1.js</include>
-        <include>sha256.js</include>
+        <include>jquery.min.js</include>
+        <include>openpgp.js</include>
+        <include>templates/pgp.template.js</include>
         <include>zim.js</include>
 
         <includeCSS>zim.css</includeCSS>
