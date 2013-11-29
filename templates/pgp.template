@@ -1,0 +1,51 @@
+<template id="infobar_verify">
+	<table id="infoBar" class="unsure" cellpadding="3" cellspacing="2">
+		<tbody>
+			<tr>
+				<td style="text-align: center;">
+					<div id="infoBarLogo">
+						ZimbraPGP
+					</div>
+				</td>
+				<td style="text-align: center; width:80%;">
+					<div id="infoBarMsg">
+						 This message is signed with a <$=data.algo$> key! Would you like to verify it's signature?
+					</div>
+				</td>
+				<td style="text-align: center;">
+					<div id="infoBarVerifyButton">
+						<a class="verifyButton" href="javascript:void(0)" onclick="Com_Zimbra_PGP.prototype.searchForKey()">Verify!</a>
+					</div>
+				</td>
+				<td style="text-align: center;">
+					<div id="infoBarEscapeButton">
+						<a class="escapeButton" href="javascript:void(0)" onclick="Com_Zimbra_PGP.prototype.destroyInfoBar()">X</a>
+					</div>
+				</td>
+			</tr>
+		</tbody>
+	</table>;
+</template>
+<template id="infobar_result">
+	<table id="infoBar" class="<$=data.className$>" cellpadding="3" cellspacing="2">
+		<tbody>
+			<tr>
+				<td style="text-align: center;">
+					<div id="infoBarLogo">
+						ZimbraPGP
+					</div>
+				</td>
+				<td style="text-align: center; width:80%;">
+					<div id="infoBarMsg">
+					 Message signed with <strong><$=data.algo$></strong> keyid: <strong><$=data.id$></strong> and user: <strong><$=data.user$></strong> <$=data.msg$>
+					</div>
+				</td>
+				<td style="text-align: center;">
+					<div id="infoBarEscapeButton">
+						<a class="escapeButton" href="javascript:void(0)" onclick="Com_Zimbra_PGP.prototype.destroyInfoBar()">X</a>
+					</div>
+				</td>
+			</tr>
+		</tbody>
+	</table>
+</template>
