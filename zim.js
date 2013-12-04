@@ -1,3 +1,5 @@
+//"use strict";
+
 /*
 
 This file is responsible for all the Zimbra integration functions and everything
@@ -8,7 +10,7 @@ TODO:
      => Implement options via setUserProperty() and getUserProperty()
 
 // List all properties in object
-properties = appCtxt._zimletMgr._ZIMLETS_BY_ID['com_zimbra_pgp']._propsById
+properties = appCtxt._zimletMgr._ZIMLETS_BY_ID['org_open_sw_pgp']._propsById
 for(var i in properties) {
     if (properties.hasOwnProperty(i)) {
         console.log(i + " = " + properties[i].value);
@@ -21,142 +23,323 @@ for(var i in properties) {
 /*
 ===== Declare a blank constructor, since we don't need one =====
 */
-Com_Zimbra_PGP = function() {
+org_open_sw_pgp = function () {
+    util.print_output = function (level, str) {
+        var header = "UNKNOWN";
+        switch (level) {
+            case util.printLevel.error:
+                header = "ERROR";
+                break;
+            case util.printLevel.warning:
+                header = "WARNING";
+                break;
+            case util.printLevel.info:
+                header = "INFO";
+                break;
+            case util.printLevel.debug:
+                header = "DEBUG";
+                break;
+        }
+        try {
+            console.log(header + ': ' + str);
+        } catch (e) {
+        }
+    };
 };
 
 /*
 ===== Build our prototype from our constructor and objectHandler =====
 */
-Com_Zimbra_PGP.prototype = new ZmZimletBase;
-Com_Zimbra_PGP.prototype.constructor = Com_Zimbra_PGP;
+org_open_sw_pgp.prototype = new ZmZimletBase;
+org_open_sw_pgp.prototype.constructor = org_open_sw_pgp;
 
 /*
 ===== Stupid convention, but may be used elsewhere =====
 */
-Com_Zimbra_PGP.prototype.toString = 
-function() {
-    return "Com_Zimbra_PGP";
+org_open_sw_pgp.prototype.toString = 
+function () {
+    return "org_open_sw_pgp";
 };
 
 /*
 ===== Init functions (not needed really) =====
 */
-Com_Zimbra_PGP.prototype.init = function() {
-    //alert('Starting Zimlet');
+org_open_sw_pgp.prototype.init = function () {
+    this.hasLocalStorage = typeof(window['localStorage']) == "object";
+
     openpgp.init();
+    openpgp.config.debug = true;
 };
-
-function showMessages(text) {
-    console.log(text);
-}
-
-/*
-===== Matches our PGP stuff, and calls the info bar function =====
-===== *NOTE*: Runs multiple times for each message =====
-                ======================
-                ===== ENTRY POINT ====
-                ======================
-*/
-Com_Zimbra_PGP.prototype.match = function(line, startIndex) {
-    var header = false;
-    if (line.search(/-----BEGIN PGP SIGNED MESSAGE-----/) != -1) {
-        header = true;
-    }
-    if (header) {
-        if (this.getUserProperty("ZimbraPGP_firstRun") == "false") {
-            //alert('Not first run!');
-        } else {
-            this.setUserProperty("ZimbraPGP_firstRun","false",true);
-            //alert('First run detected!')
-            /*
-               Do first run things 
-            */
-        }
-        this.infoBar();
-    }
-    return null;
-};
-
 
 /*
 ===== Draws our initial info bar with the proper signature algorithm =====
 */
-Com_Zimbra_PGP.prototype.infoBar = function() {
-	// Determine if we have HTML5 or not
-    if (typeof(window['localStorage']) == "object") {
-        window._HTML5 = true;
-    } else {
-        window._HTML5 = false;
+org_open_sw_pgp.prototype.onConvView = function (msg, oldMsg, view) {
+    this.processMsg(msg, view);
+}
+
+/*
+===== Draws our initial info bar with the proper signature algorithm =====
+*/
+org_open_sw_pgp.prototype.onMsgView = function (msg, oldMsg, view) {
+    this.processMsg(msg, view);
+}
+
+/*
+===== Draws our initial info bar with the proper signature algorithm =====
+*/
+org_open_sw_pgp.prototype.processMsg = function (msg, view) {
+    var elemId = view._htmlElId + '__Zimbra-PGP';
+
+    var div = document.getElementById(elemId);
+
+    if (div) {
+        var html = this.getFromTempCache(msg.id);
+
+        if (html !== null) {
+            // Make the bar visible
+            div.innerHTML = html;
+            return;
+        }
     }
 
-	// Find our infoDiv
-	this._infoDiv = document.getElementById(appCtxt.getCurrentView()._mailMsgView._infoBarId);
-
-    var html = this.getFromTempCache(appCtxt.getCurrentView()._mailMsgView._msg.id);
-
-    if (html == null) {
-		// Find the message that we're clicked on.
-		var msgText = appCtxt.getCurrentView()._mailMsgView._msg.getBodyPart();
-
-		// Parse out our signature stuff and message text
-		this._infoDiv.msg = openpgp.read_message(msgText.node.content);
-
-		var pubkeyAlgo = this.getAlgorithmType(this._infoDiv.msg[0].signature.publicKeyAlgorithm);
-
-        var values = {
-            algo: pubkeyAlgo
-        };
-
-        var html = AjxTemplate.expand("com_zimbra_pgp.templates.pgp#infobar_verify", values);
-	}
-
-    // Make the bar visible
-    this._infoDiv.innerHTML = html;
+    // Get the plain text body
+    msg.getBodyPart(ZmMimeTable.TEXT_PLAIN, AjxCallback.simpleClosure(this.processMsgCB, this, view, div, msg.id));
 };
+
+/*
+===== Draws our initial info bar with the proper signature algorithm =====
+*/
+org_open_sw_pgp.prototype.processMsgCB = function (view, div, msgId, bodyPart) {
+    if (bodyPart) {
+        var msgText = bodyPart.getContent();
+
+        if (msgText.match(/^-----BEGIN (.*)-----$/m)) {
+            if (!div) {
+                var bodyDiv = document.getElementById(view._msgBodyDivId);
+
+                div = document.createElement("div");
+                div.id = view._htmlElId + '__Zimbra-PGP';
+
+                bodyDiv.parentElement.insertBefore(div, bodyDiv);
+
+                div = document.getElementById(div.id);
+            }
+
+            var msgInfo = { divId:div.id, mailMsgId: msgId };
+            var zimlet = this;
+            var html;
+            var buttons;
+
+            // Parse out our signature stuff and message text
+            msgInfo.openpgpMsg = openpgp.read_message(msgText);
+
+            if (msgInfo.openpgpMsg) {
+                var pubkeyAlgo = this.getAlgorithmType(msgInfo.openpgpMsg[0].signature.publicKeyAlgorithm);
+
+                var values = {
+                    algo: pubkeyAlgo,
+                };
+
+                div.innerHTML = AjxTemplate.expand("org_open_sw_pgp.templates.pgp#infobar_verify", values);
+
+                buttons = div.getElementsByClassName("verifyButton");
+                buttons[0].onclick = function () { zimlet.searchForKey(msgInfo); };
+            } else {
+                var values = {
+                    className: 'fail',
+                    algo: 'unknown',
+                    id: 'unknown',
+                    user: 'unknown',
+                    msg: 'Error parsing message',
+                };
+
+                div.innerHTML = AjxTemplate.expand("org_open_sw_pgp.templates.pgp#infobar_result", values);
+            }
+
+            buttons = div.getElementsByClassName("escapeButton");
+            buttons[0].onclick = function () { zimlet.destroyInfoBar(msgInfo); };
+        }
+    } else {
+        //msg: 'Couldn\'t find message??',
+        //debugger;
+    }
+}
 
 /*
 ===== Destroys the info bar =====
 */
-Com_Zimbra_PGP.prototype.destroyInfoBar = function() {
-    // Find our infoDiv
-    this._infoDiv = document.getElementById(appCtxt.getCurrentView()._mailMsgView._infoBarId);
-    this._infoDiv.innerHTML = "";
+org_open_sw_pgp.destroyInfoBar = function (msgInfo) {
+    document.getElementById(msgInfo.divId).innerHTML = "";
+    this.removeFromTempCache(msgInfo.mailMsgId);
 };
 
 
 /*
 ===== Searches cache for key, if not found, ask about going online =====
 */
-Com_Zimbra_PGP.prototype.searchForKey = function() {
-    // Find our infoDiv
-    this._infoDiv = document.getElementById(appCtxt.getCurrentView()._mailMsgView._infoBarId);
-    
-    // If this key is found in the cache
-    var keyid = this._infoDiv.msg[0].signature.getIssuer();
-    var keyList = openpgp.keyring.getPublicKeysForKeyId(keyid);
-    if (keyList != null && keyList.length > 0) {
-        this.msgVerify();
-    // Otherwise, ask about going online
+org_open_sw_pgp.prototype.searchForKey = function (msgInfo) {
+    var signature = msgInfo.openpgpMsg[0].signature;
+    var keyList = openpgp.keyring.getPublicKeysForKeyId(signature.getIssuer());
+    if (keyList !== null && keyList.length > 0) {
+        // If this key is found in the cache
+        this.msgVerify(msgInfo, keyList);
     } else {   
-        this.askSearch(); 
+        // Otherwise, ask about going online
+        var dialog = appCtxt.getYesNoMsgDialog(); 
+        var errMsg = "Could not find public key in the cache, search pgp.mit.edu for it?";
+        var style = DwtMessageDialog.INFO_STYLE;
+
+        dialog.setButtonListener(DwtDialog.YES_BUTTON, new AjxListener(this, this._searchBtnListener, msgInfo));
+        dialog.setButtonListener(DwtDialog.NO_BUTTON, new AjxListener(this, this._dialogCloseListener));
+
+        dialog.reset();
+        dialog.setMessage(errMsg, style);
+        dialog.popup();
     }
 };
 
-Com_Zimbra_PGP.prototype.storeInTempCache = function(msgId, HTML) {
+/*
+===== This searches the interwebs for a suitable public key =====
+*/
+org_open_sw_pgp.prototype._searchBtnListener = function (msgInfo, eventobj) {
+    eventobj.item.parent.popdown();
+
+    var keyid = msgInfo.openpgpMsg[0].signature.getIssuer();
+    var response = AjxRpc.invoke(null, '/service/zimlet/org_open_sw_pgp/lookup.jsp?key=0x'+util.hexstrdump(keyid).substring(8), null, null, true);
+    // If we don't have a null response
+    if (response.text !== "" && response.txt !== "No email specified") {
+        // If the key was found, 
+        // Create a new temporary div to populate with our response so we can navigate it easier, and hide it.
+        var temp_div = document.createElement('div');
+        temp_div.innerHTML = response.text;
+        var keytext = temp_div.getElementsByTagName('pre')[0].innerHTML;
+        openpgp.keyring.importPublicKey(keytext);
+        this.msgVerify(msgInfo);
+    } else {
+        // If no key was found, error out and display the problem. 
+        // Will update so manual key entry is possible later. 
+        var dialog = appCtxt.getYesNoMsgDialog(); 
+        var errMsg = "Could not find the key on pgp.mit.edu, enter it manually?";
+        var style = DwtMessageDialog.INFO_STYLE;
+
+        dialog.setButtonListener(DwtDialog.YES_BUTTON, new AjxListener(this, manualKeyEntry, msgInfo));
+        dialog.setButtonListener(DwtDialog.NO_BUTTON, new AjxListener(this, _dialogCloseListener));
+
+        dialog.reset();
+        dialog.setMessage(errMsg, style);
+        dialog.popup();
+    }
+};
+
+/*
+===== This is the function responsible for the drawing of the manual key entry stuff =====
+*/
+org_open_sw_pgp.prototype.manualKeyEntry = function (msgInfo, eventobj) {
+    eventobj.item.parent.popdown();
+
+    var HTML = '<div id="keyEntryDiv">' +
+                   '<textarea id="keyEntryTextarea"></textarea>' +
+               '</div>';
+
+    var sDialogTitle = "<center>Enter in the public key and press \"OK\"</center>";
+
+    var view = new DwtComposite(appCtxt.getShell());
+    view.setSize("500", "500"); 
+    view.getHtmlElement().style.overflow = "auto";
+    view.getHtmlElement().innerHTML = HTML;
+
+    // pass the title, view & buttons information to create dialog box
+    var dialog = new ZmDialog({title:sDialogTitle, view:view, parent:appCtxt.getShell(), standardButtons:[DwtDialog.OK_BUTTON]});
+    dialog.setButtonListener(DwtDialog.OK_BUTTON, new AjxListener(this, this._readKeyListener, msgInfo));
+    dialog.popup();
+};
+
+org_open_sw_pgp.prototype._readKeyListener = function (msgInfo, eventobj) {
+    eventobj.item.parent.popdown();
+
+    // Get our key pasted in, and clear our the entry in the DOM
+    var pgpKey = document.getElementById('keyEntryTextarea').value;
+    document.getElementById('keyEntryTextarea').value = "";
+    openpgp.keyring.importPublicKey(pgpKey);
+    this.msgVerify(msgInfo);
+};
+
+/*
+===== This is the function responsible for verify the message itself and calling the proper bar =====
+*/
+org_open_sw_pgp.prototype.msgVerify = function (msgInfo, keys) {
+    var signature = msgInfo.openpgpMsg[0].signature;
+
+    if (!keys) {
+        keys = openpgp.keyring.getPublicKeysForKeyId(signature.getIssuer());
+    }
+
+    var result = false;
+    var id = "0x" + util.hexstrdump(keys[0].obj.getKeyId()).substring(8);
+    var user = keys[0].obj.userIds[0].text;
+    var pubkeyAlgo = this.getAlgorithmType(signature.publicKeyAlgorithm);
+
+    for (var i = 0 ; i < keys.length; i++) {
+        if (signature.verify(msgInfo.openpgpMsg[0].text, keys[i])) {
+            result = true;
+            id = "0x" + util.hexstrdump(keys[i].obj.getKeyId()).substring(8);
+            user = keys[i].obj.userIds[0].text;
+            break;
+        }
+    }
+
+    // Successful verification! yay!
+    this.resultBar(msgInfo, result, id, user, pubkeyAlgo);
+};
+
+/*
+===== This is function returns a text version of the public key algorithm =====
+*/
+org_open_sw_pgp.prototype.getAlgorithmType = function (algorithm) {
+    var pubkeyAlgo = "UNKNOWN";
+
+    switch (algorithm) {
+        case 1:     // RSA (Encrypt or Sign)
+        case 2:     // RSA Encrypt-Only
+        case 3:     // RSA Sign-Only
+            pubkeyAlgo = "RSA";
+            break;
+        case 17:    // DSA (Digital Signature Algorithm)
+            pubkeyAlgo = "DSA";
+            break;
+        default:
+            break;
+    }
+
+    return pubkeyAlgo;
+};
+
+org_open_sw_pgp.prototype.removeFromTempCache = function (msgId) {
     // If we have the necessary sessionStorage object
-    if (window._HTML5) {
+    if (this.hasLocalStorage) {
+        sessionStorage.removeItem(msgId);
+    } else {
+        // By default cookies are all session
+        document.cookie.removeItem('PGPVerified_' + msgId);
+    }
+};
+
+org_open_sw_pgp.prototype.storeInTempCache = function (msgId, HTML) {
+    // If we have the necessary sessionStorage object
+    if (this.hasLocalStorage) {
         sessionStorage.setItem(msgId, escape(HTML));
     } else {
         // By default cookies are all session
-        document.cookie = 'PGPVerified_' + msgId +'='+ escape(HTML)
+        document.cookie = 'PGPVerified_' + msgId +'='+ escape(HTML);
     }
 };
 
-Com_Zimbra_PGP.prototype.getFromTempCache = function(msgId) {
+org_open_sw_pgp.prototype.getFromTempCache = function (msgId) {
     // If we have the necessary localStorage object
-    if (window._HTML5) {
+    if (this.hasLocalStorage) {
         msgHTML = sessionStorage.getItem(msgId);
-        if (msgHTML != null) {
+        if (msgHTML !== null) {
             msgHTML = unescape(msgHTML);
         }
         return msgHTML;
@@ -182,215 +365,43 @@ Com_Zimbra_PGP.prototype.getFromTempCache = function(msgId) {
 };
 
 /*
-===== Confirm it's alright to go online =====
-*/
-Com_Zimbra_PGP.prototype.askSearch = function() {
-    // Get our new DWT widget window refrence
-    this._dialog = appCtxt.getYesNoMsgDialog(); 
-    // Message
-    var errMsg = "Could not find public key in the cache, search pgp.mit.edu for it?";
-    // Just a warning, not critical 
-    // see http://wiki.zimbra.com/wiki/ZCS_6.0:Zimlet_Developers_Guide:Examples:Dialogs#Screenshots
-    var style = DwtMessageDialog.INFO_STYLE;
-
-    // set the button listeners up to the proper callbacks
-    this._dialog.setButtonListener(DwtDialog.YES_BUTTON, new AjxListener(this, this._searchBtnListener));
-    this._dialog.setButtonListener(DwtDialog.NO_BUTTON, new AjxListener(this, this._clrBtnListener)); 
-
-    // Reset state to a known state
-    this._dialog.reset();
-    // Pop in the message
-    this._dialog.setMessage(errMsg,style);
-    // and pop it up!
-    this._dialog.popup();
-};
-
-/*
-===== This searches the interwebs for a suitable public key =====
-*/
-Com_Zimbra_PGP.prototype._searchBtnListener = function(obj){
-    // Find our infoDiv
-    this._infoDiv = document.getElementById(appCtxt.getCurrentView()._mailMsgView._infoBarId);
-    // Clear our popup
-    this._dialog.popdown();
-    // Get our infoDiv location
-    this._infoDiv = document.getElementById(appCtxt.getCurrentView()._mailMsgView._infoBarId);
-    // Create a new temporary div to populate with our response so we can navigate it easier, and hide it.
-    var temp_div = document.createElement('div');
-    // Talk to the JSP page to lookup the keyid parsed from the signature
-    var keyid = this._infoDiv.msg[0].signature.getIssuer();
-    var response = AjxRpc.invoke(null, '/service/zimlet/com_zimbra_pgp/lookup.jsp?key=0x'+util.hexstrdump(keyid).substring(8), null, null, true);
-    // If we don't have a null response
-    if (response.text !== "" && response.txt !== "No email specified") {
-        // If the key was found, 
-        temp_div.innerHTML = response.text;
-        var keytext = temp_div.getElementsByTagName('pre')[0].innerHTML;
-        openpgp.keyring.importPublicKey(keytext);
-        this.msgVerify();
-    } else {
-        // If no key was found, error out and display the problem. 
-        // Will update so manual key entry is possible later. 
-        this.askManualEntry();
-    }
-};
-
-/*
-===== This asks about entering a key in manually, and stores it in the cache =====
-*/
-Com_Zimbra_PGP.prototype.askManualEntry = function(obj){
-    // Get our new DWT widget window refrence
-    this._dialog = appCtxt.getYesNoMsgDialog(); 
-    // Message
-    var errMsg = "Could not find the key on pgp.mit.edu, enter it manually?";
-    // Just a warning, not critical 
-    var style = DwtMessageDialog.INFO_STYLE;
-
-    // set the button listeners up to the proper callbacks
-    this._dialog.setButtonListener(DwtDialog.YES_BUTTON, new AjxListener(this, this.manualKeyEntry));
-    this._dialog.setButtonListener(DwtDialog.NO_BUTTON, new AjxListener(this, this._clrBtnListener)); 
-
-    // Reset state to a known state
-    this._dialog.reset();
-    // Pop in the message
-    this._dialog.setMessage(errMsg,style);
-    // and pop it up!
-    this._dialog.popup();
-};
-
-/*
-===== This is the function responsible for verify the message itself and calling the proper bar =====
-*/
-Com_Zimbra_PGP.prototype.msgVerify = function() {
-    // Find our infoDiv
-    this._infoDiv = document.getElementById(appCtxt.getCurrentView()._mailMsgView._infoBarId);
-
-    var signature = this._infoDiv.msg[0].signature;
-    var keyList = openpgp.keyring.getPublicKeysForKeyId(signature.getIssuer());
-    var id = "0x" + util.hexstrdump(keyList[0].obj.getKeyId()).substring(8);
-    var user = keyList[0].obj.userIds[0].text;
-    var pubkeyAlgo = this.getAlgorithmType(signature.publicKeyAlgorithm);
-    var result = false;
-
-    // console.log(this._infoDiv.msg[0].text);
-    // console.log(util.hexdump(this._infoDiv.msg[0].text));
-
-    for (var i = 0 ; i < keyList.length; i++) {
-        if (signature.verify(this._infoDiv.msg[0].text, keyList[i])) {
-            user = keyList[i].obj.userIds[0].text;
-            id = "0x" + util.hexstrdump(keyList[i].obj.getKeyId()).substring(8);
-            result = true;
-            break;
-        }
-    }
-
-    // Successful verification! yay!
-    this.resultBar(result, id, user, pubkeyAlgo);
-};
-
-/*
-===== This is the function responsible for the drawing of the manual key entry stuff =====
-*/
-Com_Zimbra_PGP.prototype.manualKeyEntry = function() {
-    this._dialog.popdown();
-    HTML = '<div id="keyEntryDiv">' +
-	           '<textarea id="keyEntryTextarea"></textarea>' +
-	       '</div>';
-
-    var sDialogTitle = "<center>Enter in the public key and press \"OK\"</center>";
-
-    this.pView = new DwtComposite(appCtxt.getShell());
-    this.pView.setSize("500", "500"); 
-    this.pView.getHtmlElement().style.overflow = "auto";
-    this.pView.getHtmlElement().innerHTML = HTML;
-
-    // pass the title, view & buttons information to create dialog box
-    this._dialog = new ZmDialog({title:sDialogTitle, view:this.pView, parent:appCtxt.getShell(), standardButtons:[DwtDialog.OK_BUTTON]});
-    this._dialog.setButtonListener(DwtDialog.OK_BUTTON, new AjxListener(this, this._readKeyListener)); 
-    this._dialog.popup();
-};
-
-/*
-===== This is function returns a text version of the public key algorithm =====
-*/
-Com_Zimbra_PGP.prototype.getAlgorithmType = function(algorithm) {
-    var pubkeyAlgo = "UNKNOWN";
-
-    switch (algorithm) {
-        case 1:		// RSA (Encrypt or Sign)
-        case 2:		// RSA Encrypt-Only
-        case 3:		// RSA Sign-Only
-            pubkeyAlgo = "RSA";
-            break;
-        case 17:	// DSA (Digital Signature Algorithm)
-            pubkeyAlgo = "DSA";
-            break;
-    }
-
-    return pubkeyAlgo;
-}
-
-/*
 ===== These change the infoBar stuff to pass/fail verification =====
 */
-Com_Zimbra_PGP.prototype.resultBar = function(succeeded, id, user, type) {
-    this._infoDiv = document.getElementById(appCtxt.getCurrentView()._mailMsgView._infoBarId);
-
+org_open_sw_pgp.prototype.resultBar = function (msgInfo, succeeded, keyId, user, type) {
     user = user.replace('<','&lt;').replace('>','&gt;');
 
     var values = {
         className: succeeded ? 'success' : 'fail',
         algo: type,
-        id: id,
+        id: keyId,
         user: user,
-        msg: succeeded ? 'verified successfully!' : '*NOT* verified!'
+        msg: succeeded ? 'verified successfully!' : '*NOT* verified!',
+        infoBarDivId: msgInfo.divId
     };
 
-    var html = AjxTemplate.expand("com_zimbra_pgp.templates.pgp#infobar_result", values);
+    var html = AjxTemplate.expand("org_open_sw_pgp.templates.pgp#infobar_result", values);
+    var zimlet = this;
+    var div = document.getElementById(msgInfo.divId);
 
-    document.getElementById('infoBarMsg').innerHTML = html;
+    div.innerHTML = html;
 
-    // Make the bar visible
-    this._infoDiv.innerHTML = html;
-
-    msgId = appCtxt.getCurrentView()._mailMsgView._msg.id
-    this.storeInTempCache(msgId, html)
+    buttons = div.getElementsByClassName("escapeButton");
+    buttons[0].onclick = function () { zimlet.destroyInfoBar(msgInfo); };
 };
 
 /*
 ===== Generic error handler, pass it a message and it displays all scary and everything =====
 */
-Com_Zimbra_PGP.prototype.errDialog = function(msg){
-        // Get refrence to our DWT object
-        this._errDialog = appCtxt.getMsgDialog(); 
-        // Set the style to critical
-        var style = DwtMessageDialog.CRITICAL_STYLE;
-        // Set the listener callback to just pop down the message
-        this._errDialog.setButtonListener(DwtDialog.OK_BUTTON, new AjxListener(this, this._clrErrBtnListener));
-        // Reset to a good state
-        this._errDialog.reset();
-        // Set our message to the one passed in and pop it up!
-        this._errDialog.setMessage(msg,style);
-        this._errDialog.popup();
+org_open_sw_pgp.prototype.errDialog = function (msg) {
+    dialog = appCtxt.getMsgDialog(); 
+    var style = DwtMessageDialog.CRITICAL_STYLE;
+
+    dialog.setButtonListener(DwtDialog.OK_BUTTON, new AjxListener(this, this._dialogCloseListener));
+    dialog.reset();
+    dialog.setMessage(msg, style);
+    dialog.popup();
 };
 
-/*
-===== These are the button listeners =====
-*/
-Com_Zimbra_PGP.prototype._clrErrBtnListener = function(){
-    // Pops down the _dialog refrence
-    this._errDialog.popdown();
-};
-
-Com_Zimbra_PGP.prototype._clrBtnListener = function(){
-    // Pops down the _dialog refrence
-    this._dialog.popdown();
-};
-
-Com_Zimbra_PGP.prototype._readKeyListener = function(){
-    this._infoDiv = document.getElementById(appCtxt.getCurrentView()._mailMsgView._infoBarId);
-    this._dialog.popdown();
-    // Get our key pasted in, and clear our the entry in the DOM
-    var pgpKey = document.getElementById('keyEntryTextarea').value;
-    document.getElementById('keyEntryTextarea').value = "";
-    openpgp.keyring.importPublicKey(pgpKey);
+org_open_sw_pgp.prototype._dialogCloseListener = function (eventobj) {
+    eventobj.item.parent.popdown();
 };

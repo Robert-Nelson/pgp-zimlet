@@ -1,5 +1,5 @@
 <template id="infobar_verify">
-	<table id="infoBar" class="unsure" cellpadding="3" cellspacing="2">
+	<table class="unsure" cellpadding="3" cellspacing="2">
 		<tbody>
 			<tr>
 				<td style="text-align: center;">
@@ -14,20 +14,20 @@
 				</td>
 				<td style="text-align: center;">
 					<div id="infoBarVerifyButton">
-						<a class="verifyButton" href="javascript:void(0)" onclick="Com_Zimbra_PGP.prototype.searchForKey()">Verify!</a>
+						<a class="verifyButton" href="javascript:void(0)">Verify!</a>
 					</div>
 				</td>
 				<td style="text-align: center;">
 					<div id="infoBarEscapeButton">
-						<a class="escapeButton" href="javascript:void(0)" onclick="Com_Zimbra_PGP.prototype.destroyInfoBar()">X</a>
+						<a class="escapeButton" href="javascript:void(0)">X</a>
 					</div>
 				</td>
 			</tr>
 		</tbody>
-	</table>;
+	</table>
 </template>
 <template id="infobar_result">
-	<table id="infoBar" class="<$=data.className$>" cellpadding="3" cellspacing="2">
+	<table class="<$=data.className$>" cellpadding="3" cellspacing="2">
 		<tbody>
 			<tr>
 				<td style="text-align: center;">
@@ -42,7 +42,7 @@
 				</td>
 				<td style="text-align: center;">
 					<div id="infoBarEscapeButton">
-						<a class="escapeButton" href="javascript:void(0)" onclick="Com_Zimbra_PGP.prototype.destroyInfoBar()">X</a>
+						<a class="escapeButton" href="javascript:void(0)">X</a>
 					</div>
 				</td>
 			</tr>

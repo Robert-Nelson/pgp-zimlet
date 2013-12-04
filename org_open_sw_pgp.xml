@@ -1,4 +1,4 @@
-<zimlet name="com_zimbra_pgp" version="1.0" description="Provides basic PGP verification for signed emails">
+<zimlet name="org_open_sw_pgp" version="1.0" description="Provides basic PGP verification for signed emails">
         <summary>
                 This Zimlet provides basic PGP signature verification for zimbra.
                 In future revisions it may provide actual encryption and decryption, 
@@ -7,7 +7,7 @@
         </summary>
 
         <include>jquery.min.js</include>
-        <include>openpgp.js</include>
+        <include>openpgp.min.js</include>
         <include>templates/pgp.template.js</include>
         <include>zim.js</include>
 
@@ -16,15 +16,5 @@
         <resource>lookup.jsp</resource>
         <resource>pgp.gif</resource>
 
-        <handlerObject>Com_Zimbra_PGP</handlerObject>
-
-        <contentObject>
-          <matchOn>
-            <regex attrs="g">[\-]*BEGIN PGP SIGNATURE[\-]*</regex>
-          </matchOn>
-        </contentObject>
-
+        <handlerObject>org_open_sw_pgp</handlerObject>
 </zimlet>
-
-
-
