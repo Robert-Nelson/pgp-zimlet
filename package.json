@@ -1,0 +1,29 @@
+{
+  "name": "org_open_sw_pgp",
+  "version": "0.9.0-dev",
+  "engines": {
+    "node": ">=0.8"
+  },
+  "scripts": {
+    "pretest": "grunt browserify",
+    "test": "grunt test",
+    "start": "grunt dev"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "browserify": "~2.35",
+    "chai": "~1.8.1",
+    "grunt": "~0.4.2",
+    "grunt-browserify": "~1.2.11",
+    "grunt-contrib-copy": "~0.4.1",
+    "grunt-contrib-jshint": "*",
+    "grunt-contrib-uglify": "*",
+    "grunt-jsbeautifier": "*",
+    "grunt-jsdoc": "*",
+    "grunt-text-replace": "*",
+    "mocha": "~1.15.1",
+    "mocha-phantomjs": "~3.1.6",
+    "phantomjs": "~1.9.2-5",
+    "sinon": "~1.7.3"
+  }
+}

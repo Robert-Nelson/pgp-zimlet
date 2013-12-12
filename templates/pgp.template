@@ -9,7 +9,7 @@
 				</td>
 				<td style="text-align: center; width:80%;">
 					<div id="infoBarMsg">
-						 This message is signed with a <$=data.algo$> key! Would you like to verify it's signature?
+						 This message is signed! Would you like to verify it's signature?
 					</div>
 				</td>
 				<td style="text-align: center;">
@@ -37,7 +37,7 @@
 				</td>
 				<td style="text-align: center; width:80%;">
 					<div id="infoBarMsg">
-					 Message signed with <strong><$=data.algo$></strong> keyid: <strong><$=data.id$></strong> and user: <strong><$=data.user$></strong> <$=data.msg$>
+					 Message signed by <strong><$=data.user$></strong> with keyid: <strong><$=data.id$></strong> <$=data.msg$>
 					</div>
 				</td>
 				<td style="text-align: center;">

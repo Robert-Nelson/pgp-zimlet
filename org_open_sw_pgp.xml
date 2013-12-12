@@ -6,10 +6,11 @@
                 and keep them secure!
         </summary>
 
-        <include>jquery.min.js</include>
-        <include>openpgp.min.js</include>
+        <!--<include>jquery.min.js</include>-->
+        <include>resources/openpgp.min.js</include>
+        <include>resources/keyring.min.js</include>
+        <include>resources/org_open_sw_pgp.js</include>
         <include>templates/pgp.template.js</include>
-        <include>zim.js</include>
 
         <includeCSS>zim.css</includeCSS>
 

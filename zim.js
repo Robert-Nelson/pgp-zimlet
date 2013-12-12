@@ -20,29 +20,35 @@ for(var i in properties) {
 
 */
 
+var openpgp = require('openpgp');
+
 /*
 ===== Declare a blank constructor, since we don't need one =====
 */
-org_open_sw_pgp = function () {
-	util.print_output = function (level, str) {
-		var header = "UNKNOWN";
-		switch (level) {
-			case util.printLevel.error:
-				header = "ERROR";
-				break;
-			case util.printLevel.warning:
-				header = "WARNING";
-				break;
-			case util.printLevel.info:
-				header = "INFO";
-				break;
-			case util.printLevel.debug:
-				header = "DEBUG";
-				break;
-		}
-		try {
-			console.log(header + ': ' + str);
-		} catch (e) {
+org_open_sw_pgp = function (testMode, keyring) {
+	this.testMode = testMode ? true : false;
+	this.keyring = keyring ? keyring : require('keyring');
+	openpgp.util.print_output = function (level, str) {
+		if (!this.testMode) {
+			var header = "UNKNOWN";
+			switch (level) {
+				case openpgp.util.printLevel.error:
+					header = "ERROR";
+					break;
+				case openpgp.util.printLevel.warning:
+					header = "WARNING";
+					break;
+				case openpgp.util.printLevel.info:
+					header = "INFO";
+					break;
+				case openpgp.util.printLevel.debug:
+					header = "DEBUG";
+					break;
+			}
+			try {
+				console.log(header + ': ' + str);
+			} catch (e) {
+			}
 		}
 	};
 };
@@ -56,8 +62,7 @@ org_open_sw_pgp.prototype.constructor = org_open_sw_pgp;
 /*
 ===== Stupid convention, but may be used elsewhere =====
 */
-org_open_sw_pgp.prototype.toString = 
-function () {
+org_open_sw_pgp.prototype.toString = function () {
 	return "org_open_sw_pgp";
 };
 
@@ -67,8 +72,7 @@ function () {
 org_open_sw_pgp.prototype.init = function () {
 	this.hasLocalStorage = typeof(window['localStorage']) == "object";
 
-	openpgp.init();
-	openpgp.config.debug = true;
+	//openpgp.config.debug = true;
 };
 
 /*
@@ -96,7 +100,7 @@ org_open_sw_pgp.prototype.processMsg = function (msg, view) {
 	if (div) {
 		var html = this.getFromTempCache(msg.id);
 
-		if (html !== null) {
+		if (html) {
 			// Make the bar visible
 			div.innerHTML = html;
 			return;
@@ -132,14 +136,10 @@ org_open_sw_pgp.prototype.processMsgCB = function (view, div, msgId, bodyPart) {
 			var buttons;
 
 			// Parse out our signature stuff and message text
-			msgInfo.openpgpMsg = openpgp.read_message(msgText);
+			msgInfo.cleartext = openpgp.cleartext.readArmored(msgText);
 
-			if (msgInfo.openpgpMsg) {
-				var pubkeyAlgo = this.getAlgorithmType(msgInfo.openpgpMsg[0].signature.publicKeyAlgorithm);
-
-				var values = {
-					algo: pubkeyAlgo,
-				};
+			if (msgInfo.cleartext) {
+				var values = { };
 
 				div.innerHTML = AjxTemplate.expand("org_open_sw_pgp.templates.pgp#infobar_verify", values);
 
@@ -159,6 +159,11 @@ org_open_sw_pgp.prototype.processMsgCB = function (view, div, msgId, bodyPart) {
 
 			buttons = div.getElementsByClassName("escapeButton");
 			buttons[0].onclick = function () { zimlet.destroyInfoBar(msgInfo); };
+
+			if (this.testMode) {
+				this.searchForKey(msgInfo);
+			}
+
 		}
 	} else {
 		//msg: 'Couldn\'t find message??',
@@ -179,23 +184,35 @@ org_open_sw_pgp.destroyInfoBar = function (msgInfo) {
 ===== Searches cache for key, if not found, ask about going online =====
 */
 org_open_sw_pgp.prototype.searchForKey = function (msgInfo) {
-	var signature = msgInfo.openpgpMsg[0].signature;
-	var keyList = openpgp.keyring.getPublicKeysForKeyId(signature.getIssuer());
-	if (keyList !== null && keyList.length > 0) {
+	msgInfo.keyList = [];
+	msgInfo.keyIdList = [];
+	var keyIdList = msgInfo.cleartext.getSigningKeyIds();
+	for (var i = 0; i < keyIdList.length; i++) {
+		var keyId = openpgp.util.hexstrdump(keyIdList[i].write());
+		var publicKeyList = this.keyring.getKeysForKeyId(keyId);
+		if (publicKeyList && publicKeyList.length > 0) {
+			msgInfo.keyList = msgInfo.keyList.concat(publicKeyList);
+		} else {
+			msgInfo.keyIdList.push(keyId);
+		}
+	}
+	if (msgInfo.keyList.length > 0) {
 		// If this key is found in the cache
-		this.msgVerify(msgInfo, keyList);
-	} else {   
-		// Otherwise, ask about going online
-		var dialog = appCtxt.getYesNoMsgDialog(); 
-		var errMsg = "Could not find public key in the cache, search pgp.mit.edu for it?";
-		var style = DwtMessageDialog.INFO_STYLE;
+		this.msgVerify(msgInfo);
+	} else {
+		if (!this.testMode) {
+			// Otherwise, ask about going online
+			var dialog = appCtxt.getYesNoMsgDialog(); 
+			var errMsg = "Could not find public key in the cache, search pgp.mit.edu for it?";
+			var style = DwtMessageDialog.INFO_STYLE;
 
-		dialog.setButtonListener(DwtDialog.YES_BUTTON, new AjxListener(this, this._searchBtnListener, msgInfo));
-		dialog.setButtonListener(DwtDialog.NO_BUTTON, new AjxListener(this, this._dialogCloseListener));
+			dialog.setButtonListener(DwtDialog.YES_BUTTON, new AjxListener(this, this._searchBtnListener, msgInfo));
+			dialog.setButtonListener(DwtDialog.NO_BUTTON, new AjxListener(this, this._dialogCloseListener));
 
-		dialog.reset();
-		dialog.setMessage(errMsg, style);
-		dialog.popup();
+			dialog.reset();
+			dialog.setMessage(errMsg, style);
+			dialog.popup();
+		}
 	}
 };
 
@@ -203,10 +220,12 @@ org_open_sw_pgp.prototype.searchForKey = function (msgInfo) {
 ===== This searches the interwebs for a suitable public key =====
 */
 org_open_sw_pgp.prototype._searchBtnListener = function (msgInfo, eventobj) {
-	eventobj.item.parent.popdown();
+	if (eventobj) {
+		eventobj.item.parent.popdown();
+	}
 
-	var keyid = msgInfo.openpgpMsg[0].signature.getIssuer();
-	var response = AjxRpc.invoke(null, '/service/zimlet/org_open_sw_pgp/lookup.jsp?key=0x'+util.hexstrdump(keyid).substring(8), null, null, true);
+	var keyid = msgInfo.keyIdList[0];
+	var response = AjxRpc.invoke(null, '/service/zimlet/org_open_sw_pgp/lookup.jsp?key=0x'+keyid, null, null, true);
 	// If we don't have a null response
 	if (response.text !== "" && response.txt !== "No email specified") {
 		// If the key was found, 
@@ -214,7 +233,7 @@ org_open_sw_pgp.prototype._searchBtnListener = function (msgInfo, eventobj) {
 		var temp_div = document.createElement('div');
 		temp_div.innerHTML = response.text;
 		var keytext = temp_div.getElementsByTagName('pre')[0].innerHTML;
-		openpgp.keyring.importPublicKey(keytext);
+		this.keyring.importKey(keytext);
 		this.msgVerify(msgInfo);
 	} else {
 		// If no key was found, error out and display the problem. 
@@ -261,58 +280,41 @@ org_open_sw_pgp.prototype._readKeyListener = function (msgInfo, eventobj) {
 	// Get our key pasted in, and clear our the entry in the DOM
 	var pgpKey = document.getElementById('keyEntryTextarea').value;
 	document.getElementById('keyEntryTextarea').value = "";
-	openpgp.keyring.importPublicKey(pgpKey);
+	this.keyring.importKey(pgpKey);
 	this.msgVerify(msgInfo);
 };
 
 /*
-===== This is the function responsible for verify the message itself and calling the proper bar =====
+===== This is the function responsible for verifying the message itself and calling the proper bar =====
 */
-org_open_sw_pgp.prototype.msgVerify = function (msgInfo, keys) {
-	var signature = msgInfo.openpgpMsg[0].signature;
-
-	if (!keys) {
-		keys = openpgp.keyring.getPublicKeysForKeyId(signature.getIssuer());
-	}
-
-	var result = false;
-	var id = "0x" + util.hexstrdump(keys[0].obj.getKeyId()).substring(8);
-	var user = keys[0].obj.userIds[0].text;
-	var pubkeyAlgo = this.getAlgorithmType(signature.publicKeyAlgorithm);
-
-	for (var i = 0 ; i < keys.length; i++) {
-		if (signature.verify(msgInfo.openpgpMsg[0].text, keys[i])) {
-			result = true;
-			id = "0x" + util.hexstrdump(keys[i].obj.getKeyId()).substring(8);
-			user = keys[i].obj.userIds[0].text;
-			break;
+org_open_sw_pgp.prototype.msgVerify = function (msgInfo) {
+	if (msgInfo.keyList.length == 0) {
+		var keyIdList = msgInfo.cleartext.getSigningKeyIds();
+		for (var i = 0; i < keyIdList.length; i++) {
+			var publicKeyList = this.keyring.getKeysForKeyId(openpgp.util.hexstrdump(keyIdList[i].write()));
+			if (publicKeyList !== null && publicKeyList.length > 0) {
+				msgInfo.keyList = msgInfo.keyList.concat(publicKeyList);
+			}
 		}
 	}
 
-	// Successful verification! yay!
-	this.resultBar(msgInfo, result, id, user, pubkeyAlgo);
-};
+	var result = false;
+	var id = "0x" + openpgp.util.hexstrdump(msgInfo.keyList[0].getKeyIds()[0].write()).substring(8);
+	var user = msgInfo.keyList[0].getUserIds()[0];
 
-/*
-===== This is function returns a text version of the public key algorithm =====
-*/
-org_open_sw_pgp.prototype.getAlgorithmType = function (algorithm) {
-	var pubkeyAlgo = "UNKNOWN";
-
-	switch (algorithm) {
-		case 1:     // RSA (Encrypt or Sign)
-		case 2:     // RSA Encrypt-Only
-		case 3:     // RSA Sign-Only
-			pubkeyAlgo = "RSA";
-			break;
-		case 17:    // DSA (Digital Signature Algorithm)
-			pubkeyAlgo = "DSA";
-			break;
-		default:
-			break;
+	var verifyResult = msgInfo.cleartext.verify(msgInfo.keyList);
+	if (verifyResult) {
+		for (var i = 0; i < verifyResult.length; i++) {
+			if (verifyResult[i].valid) {
+				result = true;
+				id = "0x" + openpgp.util.hexstrdump(verifyResult[i].keyid.write()).substring(8);
+				user = msgInfo.keyList[i].getUserIds()[0];
+				break;
+			}
+		}
 	}
 
-	return pubkeyAlgo;
+	this.resultBar(msgInfo, result, id, user);
 };
 
 org_open_sw_pgp.prototype.removeFromTempCache = function (msgId) {
@@ -367,12 +369,11 @@ org_open_sw_pgp.prototype.getFromTempCache = function (msgId) {
 /*
 ===== These change the infoBar stuff to pass/fail verification =====
 */
-org_open_sw_pgp.prototype.resultBar = function (msgInfo, succeeded, keyId, user, type) {
+org_open_sw_pgp.prototype.resultBar = function (msgInfo, succeeded, keyId, user) {
 	user = user.replace('<','&lt;').replace('>','&gt;');
 
 	var values = {
 		className: succeeded ? 'success' : 'fail',
-		algo: type,
 		id: keyId,
 		user: user,
 		msg: succeeded ? 'verified successfully!' : '*NOT* verified!',
@@ -389,19 +390,8 @@ org_open_sw_pgp.prototype.resultBar = function (msgInfo, succeeded, keyId, user,
 	buttons[0].onclick = function () { zimlet.destroyInfoBar(msgInfo); };
 };
 
-/*
-===== Generic error handler, pass it a message and it displays all scary and everything =====
-*/
-org_open_sw_pgp.prototype.errDialog = function (msg) {
-	dialog = appCtxt.getMsgDialog(); 
-	var style = DwtMessageDialog.CRITICAL_STYLE;
-
-	dialog.setButtonListener(DwtDialog.OK_BUTTON, new AjxListener(this, this._dialogCloseListener));
-	dialog.reset();
-	dialog.setMessage(msg, style);
-	dialog.popup();
-};
-
 org_open_sw_pgp.prototype._dialogCloseListener = function (eventobj) {
-	eventobj.item.parent.popdown();
+	if (eventobj) {
+		eventobj.item.parent.popdown();
+	}
 };
