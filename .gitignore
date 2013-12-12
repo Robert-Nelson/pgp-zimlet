@@ -1,3 +1,4 @@
 node_modules/
 test/lib/
+resources/org_open_sw_pgp_nodebug.js
 templates/pgp.template.js
