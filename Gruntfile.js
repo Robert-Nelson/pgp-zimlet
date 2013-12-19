@@ -36,6 +36,10 @@ module.exports = function(grunt) {
               '<%= grunt.template.today("yyyy-mm-dd") %> */'
           }
         },
+        jshint: {
+            all: [ 'pgp-zimlet.js' ]
+        },
+
         copy: {
             npm: {
                 expand: true,
@@ -56,9 +60,7 @@ module.exports = function(grunt) {
     grunt.loadNpmTasks('grunt-jsdoc');
 
     grunt.registerTask('default', 'Build OpenPGP.js', function() {
-        grunt.task.run(['browserify', 'uglify']);
-        //TODO jshint is not run because of too many discovered issues, once these are addressed it should autorun
-        grunt.log.ok('Before Submitting a Pull Request please also run `grunt jshint`.');
+        grunt.task.run(['jshint', 'browserify', 'uglify']);
     });
     grunt.registerTask('documentation', ['jsdoc']);
 
@@ -79,5 +81,5 @@ module.exports = function(grunt) {
     });
 
     // Test/Dev tasks
-    grunt.registerTask('test', ['build_template', 'copy', 'mocha_phantomjs']);
+    grunt.registerTask('test', ['jshint', 'build_template', 'copy', 'mocha_phantomjs']);
 };

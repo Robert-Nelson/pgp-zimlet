@@ -6,8 +6,8 @@ This file is responsible for all the Zimbra integration functions and everything
 else that's done in the zimbra interface
 
 TODO:
-	 => Button that links to my Github
-	 => Implement options via setUserProperty() and getUserProperty()
+	=> Button that links to my Github
+	=> Implement options via setUserProperty() and getUserProperty()
 
 // List all properties in object
 properties = appCtxt._zimletMgr._ZIMLETS_BY_ID['org_open_sw_pgp']._propsById
@@ -56,7 +56,7 @@ org_open_sw_pgp = function (testMode, keyring) {
 /*
 ===== Build our prototype from our constructor and objectHandler =====
 */
-org_open_sw_pgp.prototype = new ZmZimletBase;
+org_open_sw_pgp.prototype = new ZmZimletBase();
 org_open_sw_pgp.prototype.constructor = org_open_sw_pgp;
 
 /*
@@ -70,7 +70,7 @@ org_open_sw_pgp.prototype.toString = function () {
 ===== Init functions (not needed really) =====
 */
 org_open_sw_pgp.prototype.init = function () {
-	this.hasLocalStorage = typeof(window['localStorage']) == "object";
+	this.hasLocalStorage = typeof(window.localStorage) == "object";
 
 	//openpgp.config.debug = true;
 };
@@ -80,14 +80,14 @@ org_open_sw_pgp.prototype.init = function () {
 */
 org_open_sw_pgp.prototype.onConvView = function (msg, oldMsg, view) {
 	this.processMsg(msg, view);
-}
+};
 
 /*
 ===== Draws our initial info bar with the proper signature algorithm =====
 */
 org_open_sw_pgp.prototype.onMsgView = function (msg, oldMsg, view) {
 	this.processMsg(msg, view);
-}
+};
 
 /*
 ===== Draws our initial info bar with the proper signature algorithm =====
@@ -132,49 +132,22 @@ org_open_sw_pgp.prototype.processMsgCB = function (view, div, msgId, bodyPart) {
 			}
 
 			var msgInfo = { divId:div.id, mailMsgId: msgId };
-			var zimlet = this;
-			var html;
-			var buttons;
 
 			// Parse out our signature stuff and message text
 			msgInfo.cleartext = openpgp.cleartext.readArmored(msgText);
 
 			if (msgInfo.cleartext) {
-				var values = {
-					logo: this.getResource('pgp.png'),
-					infoBarDivId: div.id
-				};
-
-				div.innerHTML = AjxTemplate.expand("org_open_sw_pgp.templates.pgp#infobar_verify", values);
-
-				buttons = div.getElementsByClassName("verifyButton");
-				buttons[0].onclick = function () { zimlet.searchForKey(msgInfo); };
+				this.verifyBar(msgInfo);
 			} else {
-				var values = {
-					logo: this.getResource('pgp.png'),
-					className: 'fail',
-					id: 'unknown',
-					user: 'unknown',
-					msg: 'Error parsing message',
-					infoBarDivId: div.id
-				};
-
-				div.innerHTML = AjxTemplate.expand("org_open_sw_pgp.templates.pgp#infobar_result", values);
+				this.resultBar(msgInfo, false, 'unknown', 'unknown', 'Error parsing message');
 			}
-
-			buttons = div.getElementsByClassName("escapeButton");
-			buttons[0].onclick = function () { zimlet.destroyInfoBar(msgInfo); };
 
 			if (this.testMode) {
 				this.searchForKey(msgInfo);
 			}
-
 		}
-	} else {
-		//msg: 'Couldn\'t find message??',
-		//debugger;
 	}
-}
+};
 
 /*
 ===== Destroys the info bar =====
@@ -222,7 +195,7 @@ org_open_sw_pgp.prototype.searchForKey = function (msgInfo) {
 };
 
 /*
-===== This searches the interwebs for a suitable public key =====
+===== This searches the internet for a suitable public key =====
 */
 org_open_sw_pgp.prototype._searchBtnListener = function (msgInfo, eventobj) {
 	if (eventobj) {
@@ -262,9 +235,9 @@ org_open_sw_pgp.prototype._searchBtnListener = function (msgInfo, eventobj) {
 org_open_sw_pgp.prototype.manualKeyEntry = function (msgInfo, eventobj) {
 	eventobj.item.parent.popdown();
 
-	var HTML = '<div id="keyEntryDiv">' +
-				   '<textarea id="keyEntryTextarea"></textarea>' +
-			   '</div>';
+	var HTML =	'<div id="keyEntryDiv">' +
+					'<textarea id="keyEntryTextarea"></textarea>' +
+				'</div>';
 
 	var sDialogTitle = "<center>Enter in the public key and press \"OK\"</center>";
 
@@ -293,10 +266,12 @@ org_open_sw_pgp.prototype._readKeyListener = function (msgInfo, eventobj) {
 ===== This is the function responsible for verifying the message itself and calling the proper bar =====
 */
 org_open_sw_pgp.prototype.msgVerify = function (msgInfo) {
-	if (msgInfo.keyList.length == 0) {
+	var index;
+
+	if (msgInfo.keyList.length === 0) {
 		var keyIdList = msgInfo.cleartext.getSigningKeyIds();
-		for (var i = 0; i < keyIdList.length; i++) {
-			var publicKeyList = this.keyring.getKeysForKeyId(openpgp.util.hexstrdump(keyIdList[i].write()));
+		for (index = 0; index < keyIdList.length; index++) {
+			var publicKeyList = this.keyring.getKeysForKeyId(openpgp.util.hexstrdump(keyIdList[index].write()));
 			if (publicKeyList !== null && publicKeyList.length > 0) {
 				msgInfo.keyList = msgInfo.keyList.concat(publicKeyList);
 			}
@@ -309,11 +284,11 @@ org_open_sw_pgp.prototype.msgVerify = function (msgInfo) {
 
 	var verifyResult = msgInfo.cleartext.verify(msgInfo.keyList);
 	if (verifyResult) {
-		for (var i = 0; i < verifyResult.length; i++) {
-			if (verifyResult[i].valid) {
+		for (index = 0; index < verifyResult.length; index++) {
+			if (verifyResult[index].valid) {
 				result = true;
-				id = "0x" + openpgp.util.hexstrdump(verifyResult[i].keyid.write()).substring(8);
-				user = msgInfo.keyList[i].getUserIds()[0];
+				id = "0x" + openpgp.util.hexstrdump(verifyResult[index].keyid.write()).substring(8);
+				user = msgInfo.keyList[index].getUserIds()[0];
 				break;
 			}
 		}
@@ -351,9 +326,9 @@ org_open_sw_pgp.prototype.getFromTempCache = function (msgId) {
 		}
 		return msgHTML;
 	} else {
-		var cookies = document.cookie.split(';');        
-		var pgpCookies = new Array();       
-		for (i=0;i<cookies.length;i++) { 
+		var cookies = document.cookie.split(';');
+		var pgpCookies = [];
+		for (i=0;i<cookies.length;i++) {
 			// Populate our pgpCookies array with the pointers to the cookies we want
 			if (cookies[i].indexOf('PGPVerified_') != -1) {
 				pgpCookies.push(i);
@@ -374,23 +349,45 @@ org_open_sw_pgp.prototype.getFromTempCache = function (msgId) {
 /*
 ===== These change the infoBar stuff to pass/fail verification =====
 */
-org_open_sw_pgp.prototype.resultBar = function (msgInfo, succeeded, keyId, user) {
+org_open_sw_pgp.prototype.verifyBar = function (msgInfo) {
+	var values = {
+		logo: this.getResource('pgp.png'),
+		infoBarDivId: msgInfo.divId
+	};
+	var zimlet = this;
+	var div = document.getElementById(msgInfo.divId);
+
+	div.innerHTML = AjxTemplate.expand("org_open_sw_pgp.templates.pgp#infobar_verify", values);
+
+	buttons = div.getElementsByClassName("verifyButton");
+	buttons[0].onclick = function () { zimlet.searchForKey(msgInfo); };
+
+	buttons = div.getElementsByClassName("escapeButton");
+	buttons[0].onclick = function () { zimlet.destroyInfoBar(msgInfo); };
+};
+
+/*
+===== These change the infoBar stuff to pass/fail verification =====
+*/
+org_open_sw_pgp.prototype.resultBar = function (msgInfo, succeeded, keyId, user, msg) {
 	user = user.replace('<','&lt;').replace('>','&gt;');
+
+	if (!msg) {
+		msg = succeeded ? 'verified successfully!' : '*NOT* verified!';
+	}
 
 	var values = {
 		logo: this.getResource('pgp.png'),
 		className: succeeded ? 'success' : 'fail',
 		id: keyId,
 		user: user,
-		msg: succeeded ? 'verified successfully!' : '*NOT* verified!',
+		msg: msg,
 		infoBarDivId: msgInfo.divId
 	};
-
-	var html = AjxTemplate.expand("org_open_sw_pgp.templates.pgp#infobar_result", values);
 	var zimlet = this;
 	var div = document.getElementById(msgInfo.divId);
 
-	div.innerHTML = html;
+	div.innerHTML = AjxTemplate.expand("org_open_sw_pgp.templates.pgp#infobar_result", values);
 
 	buttons = div.getElementsByClassName("escapeButton");
 	buttons[0].onclick = function () { zimlet.destroyInfoBar(msgInfo); };

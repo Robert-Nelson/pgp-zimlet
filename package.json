@@ -5,7 +5,7 @@
     "node": ">=0.8"
   },
   "scripts": {
-    "pretest": "grunt browserify",
+    "pretest": "grunt browserify uglify",
     "test": "grunt test",
     "start": "grunt dev"
   },

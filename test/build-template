@@ -1,2 +1,3 @@
 export ZIMBRA_HOME=`pwd`/test/zimbra
+rm templates/pgp.template.js
 java -cp ${ZIMBRA_HOME}/lib/commons-cli-1.2.jar:${ZIMBRA_HOME}/classes com.zimbra.common.util.TemplateCompiler -porg_open_sw_pgp. -a -d templates/pgp.template
