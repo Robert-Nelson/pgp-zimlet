@@ -93,7 +93,7 @@ org_open_sw_pgp.prototype.onMsgView = function (msg, oldMsg, view) {
 ===== Draws our initial info bar with the proper signature algorithm =====
 */
 org_open_sw_pgp.prototype.processMsg = function (msg, view) {
-	var elemId = view._htmlElId + '__Zimbra-PGP';
+	var elemId = view._htmlElId + '__PGP-Zimlet';
 
 	var div = document.getElementById(elemId);
 
@@ -123,7 +123,8 @@ org_open_sw_pgp.prototype.processMsgCB = function (view, div, msgId, bodyPart) {
 				var bodyDiv = document.getElementById(view._msgBodyDivId);
 
 				div = document.createElement("div");
-				div.id = view._htmlElId + '__Zimbra-PGP';
+				div.id = view._htmlElId + '__PGP-Zimlet';
+				div.className = 'pgpInfoBar';
 
 				bodyDiv.parentElement.insertBefore(div, bodyDiv);
 
@@ -139,7 +140,10 @@ org_open_sw_pgp.prototype.processMsgCB = function (view, div, msgId, bodyPart) {
 			msgInfo.cleartext = openpgp.cleartext.readArmored(msgText);
 
 			if (msgInfo.cleartext) {
-				var values = { };
+				var values = {
+					logo: this.getResource('pgp.png'),
+					infoBarDivId: div.id
+				};
 
 				div.innerHTML = AjxTemplate.expand("org_open_sw_pgp.templates.pgp#infobar_verify", values);
 
@@ -147,11 +151,12 @@ org_open_sw_pgp.prototype.processMsgCB = function (view, div, msgId, bodyPart) {
 				buttons[0].onclick = function () { zimlet.searchForKey(msgInfo); };
 			} else {
 				var values = {
+					logo: this.getResource('pgp.png'),
 					className: 'fail',
-					algo: 'unknown',
 					id: 'unknown',
 					user: 'unknown',
 					msg: 'Error parsing message',
+					infoBarDivId: div.id
 				};
 
 				div.innerHTML = AjxTemplate.expand("org_open_sw_pgp.templates.pgp#infobar_result", values);
@@ -174,7 +179,7 @@ org_open_sw_pgp.prototype.processMsgCB = function (view, div, msgId, bodyPart) {
 /*
 ===== Destroys the info bar =====
 */
-org_open_sw_pgp.destroyInfoBar = function (msgInfo) {
+org_open_sw_pgp.prototype.destroyInfoBar = function (msgInfo) {
 	document.getElementById(msgInfo.divId).innerHTML = "";
 	this.removeFromTempCache(msgInfo.mailMsgId);
 };
@@ -373,6 +378,7 @@ org_open_sw_pgp.prototype.resultBar = function (msgInfo, succeeded, keyId, user)
 	user = user.replace('<','&lt;').replace('>','&gt;');
 
 	var values = {
+		logo: this.getResource('pgp.png'),
 		className: succeeded ? 'success' : 'fail',
 		id: keyId,
 		user: user,

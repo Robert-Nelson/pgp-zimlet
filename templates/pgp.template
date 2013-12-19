@@ -3,22 +3,22 @@
 		<tbody>
 			<tr>
 				<td style="text-align: center;">
-					<div id="infoBarLogo">
-						ZimbraPGP
+					<div>
+						<img src="<$=data.logo$>" alt="logo"/>
 					</div>
 				</td>
 				<td style="text-align: center; width:80%;">
-					<div id="infoBarMsg">
+					<div class="pgpInfoBarMsg">
 						 This message is signed! Would you like to verify it's signature?
 					</div>
 				</td>
 				<td style="text-align: center;">
-					<div id="infoBarVerifyButton">
+					<div class="pgpInfoBarVerifyButton">
 						<a class="verifyButton" href="javascript:void(0)">Verify!</a>
 					</div>
 				</td>
 				<td style="text-align: center;">
-					<div id="infoBarEscapeButton">
+					<div class="pgpInfoBarEscapeButton">
 						<a class="escapeButton" href="javascript:void(0)">X</a>
 					</div>
 				</td>
@@ -31,17 +31,17 @@
 		<tbody>
 			<tr>
 				<td style="text-align: center;">
-					<div id="infoBarLogo">
-						ZimbraPGP
+					<div>
+						<img src="<$=data.logo$>" alt="logo"/>
 					</div>
 				</td>
 				<td style="text-align: center; width:80%;">
-					<div id="infoBarMsg">
-					 Message signed by <strong><$=data.user$></strong> with keyid: <strong><$=data.id$></strong> <$=data.msg$>
+					<div class="pgpInfoBarMsg">
+						Message signed by <strong><$=data.user$></strong> with keyid: <strong><$=data.id$></strong> <$=data.msg$>
 					</div>
 				</td>
 				<td style="text-align: center;">
-					<div id="infoBarEscapeButton">
+					<div class="pgpInfoBarEscapeButton">
 						<a class="escapeButton" href="javascript:void(0)">X</a>
 					</div>
 				</td>

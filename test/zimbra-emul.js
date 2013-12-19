@@ -1,6 +1,10 @@
 ZmZimletBase = function () {
 };
 
+ZmZimletBase.prototype.getResource = function (str) {
+	return str;
+};
+
 ZmMailMsg = function (str) {
 	this.bodyPart = new ZmMimePart(str);
 };

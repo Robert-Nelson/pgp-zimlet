@@ -12,10 +12,10 @@
         <include>resources/org_open_sw_pgp.js</include>
         <include>templates/pgp.template.js</include>
 
-        <includeCSS>zim.css</includeCSS>
+        <includeCSS>pgp-zimlet.css</includeCSS>
 
         <resource>lookup.jsp</resource>
-        <resource>pgp.gif</resource>
+        <resource>pgp.png</resource>
 
         <handlerObject>org_open_sw_pgp</handlerObject>
 </zimlet>

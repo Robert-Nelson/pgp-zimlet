@@ -7,7 +7,7 @@ module.exports = function(grunt) {
         browserify: {
             pgp_zimlet: {
                 files: {
-                    'resources/org_open_sw_pgp.js': ['./zim.js']
+                    'resources/org_open_sw_pgp.js': ['./pgp-zimlet.js']
                 },
                 options: {
                     debug: true,
@@ -17,7 +17,7 @@ module.exports = function(grunt) {
             },
             pgp_zimlet_nodebug: {
                 files: {
-                    'resources/org_open_sw_pgp_nodebug.js': ['./zim.js']
+                    'resources/org_open_sw_pgp_nodebug.js': ['./pgp-zimlet.js']
                 },
                 options: {
                     external: [ 'openpgp', 'keyring' ],

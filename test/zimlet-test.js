@@ -85,6 +85,12 @@ describe('Verify clearsign msg', function() {
 
 		zimlet.init();
 		zimlet.onMsgView(msg, null, view);
+		
+		var div = document.getElementById(view._htmlElId + '__PGP-Zimlet');
+		var tables = div.getElementsByTagName('table');
+		var messageDiv = document.getElementById(view._htmlElId + '__PGP-Zimlet__Msg');
+
+		return { result: tables[0].className, msg: messageDiv.innerHtml };
 	};
 
 	describe('Verify V3 signature', function() {
