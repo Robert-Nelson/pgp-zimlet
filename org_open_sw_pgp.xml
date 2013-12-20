@@ -16,6 +16,8 @@
 
         <resource>lookup.jsp</resource>
         <resource>pgp.png</resource>
+        <resource>pgp-keys.png</resource>
+        <resource>pgp-close.png</resource>
 
         <handlerObject>org_open_sw_pgp</handlerObject>
 </zimlet>

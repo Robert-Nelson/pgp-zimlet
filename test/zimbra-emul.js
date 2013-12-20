@@ -5,6 +5,10 @@ ZmZimletBase.prototype.getResource = function (str) {
 	return str;
 };
 
+ZmZimletBase.prototype.createApp = function (tabName, tabIcon, tabTooltip) {
+	return tabName;
+};
+
 ZmMailMsg = function (str) {
 	this.bodyPart = new ZmMimePart(str);
 };

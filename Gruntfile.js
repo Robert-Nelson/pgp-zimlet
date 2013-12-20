@@ -36,10 +36,16 @@ module.exports = function(grunt) {
               '<%= grunt.template.today("yyyy-mm-dd") %> */'
           }
         },
+        jsdoc: {
+            dist: {
+                src: [ 'README.md', 'pgp-zimlet.js' ],
+                dest: 'doc',
+                config: 'jsdoc.json'
+            }
+        },
         jshint: {
             all: [ 'pgp-zimlet.js' ]
         },
-
         copy: {
             npm: {
                 expand: true,
