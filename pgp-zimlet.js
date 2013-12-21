@@ -141,31 +141,12 @@ org_open_sw_pgp.prototype.init = function () {
 };
 
 /**
- * Called by Zimbra when a new conversation is shown
- * @param {external:zimbraMail.mail.model.ZmMailMsg} msg - New message
- * @param {external:zimbraMail.mail.model.ZmMailMsg} oldMsg - Previous message
- * @param {external:zimbraMail.mail.view.ZmConvView2} view - Conversation view
-*/
-org_open_sw_pgp.prototype.onConvView = function (msg, oldMsg, view) {
-	this._processMsg(msg, view);
-};
-
-/**
  * Called by Zimbra when a new mail message is shown
  * @param {external:zimbraMail.mail.model.ZmMailMsg} msg - New message
  * @param {external:zimbraMail.mail.model.ZmMailMsg} oldMsg - Previous message
  * @param {external:zimbraMail.mail.view.ZmMailMsgView} view - Mail message view
  */
 org_open_sw_pgp.prototype.onMsgView = function (msg, oldMsg, view) {
-	this._processMsg(msg, view);
-};
-
-/**
- * Process a new mail message
- * @param {external:zimbraMail.mail.model.ZmMailMsg} msg - New message
- * @param {external:zimbraMail.mail.view.ZmConvView2|external:zimbraMail.mail.view.ZmMailMsgView} view - Conversation or mail message view
- */
-org_open_sw_pgp.prototype._processMsg = function (msg, view) {
 	var html = this._getFromTempCache(msg.id);
 
 	if (html) {
@@ -173,6 +154,14 @@ org_open_sw_pgp.prototype._processMsg = function (msg, view) {
 
 		// Make the bar visible
 		div.innerHTML = html;
+
+		var msgContext = {
+			divId: div.id,
+			mailMsgId: msg.id
+		};
+		var zimlet = this;
+		var buttons = div.getElementsByClassName("escapeButton");
+		buttons[0].onclick = function () { zimlet._destroyInfoBar(msgContext); };
 		return;
 	}
 
@@ -456,6 +445,8 @@ org_open_sw_pgp.prototype._getFromTempCache = function (msgId) {
 org_open_sw_pgp.prototype._displayVerifyBar = function (msgContext) {
 	var values = {
 		logo: this.getResource('pgp.png'),
+		closeButton: this.getResource('pgp-close.png'),
+		okayButton: this.getResource('pgp-okay.png'),
 		infoBarDivId: msgContext.divId
 	};
 	var zimlet = this;
@@ -487,6 +478,8 @@ org_open_sw_pgp.prototype._displayResultBar = function (msgContext, succeeded, k
 
 	var values = {
 		logo: this.getResource('pgp.png'),
+		closeButton: this.getResource('pgp-close.png'),
+		okayButton: this.getResource('pgp-okay.png'),
 		className: succeeded ? 'success' : 'fail',
 		id: keyId,
 		user: user,

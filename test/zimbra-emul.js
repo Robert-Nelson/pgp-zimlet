@@ -1,4 +1,5 @@
 ZmZimletBase = function () {
+	this.id = "1";
 };
 
 ZmZimletBase.prototype.getResource = function (str) {
