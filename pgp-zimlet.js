@@ -144,10 +144,10 @@ org_open_sw_pgp.prototype.init = function () {
  * Called by Zimbra when a new mail message is shown
  * @param {external:zimbraMail.mail.model.ZmMailMsg} msg - New message
  * @param {external:zimbraMail.mail.model.ZmMailMsg} oldMsg - Previous message
- * @param {external:zimbraMail.mail.view.ZmMailMsgView} view - Mail message view
+ * @param {external:zimbraMail.mail.view.ZmConvView2|external:zimbraMail.mail.view.ZmMailMsgView} view - Conversation or mail message view
  */
 org_open_sw_pgp.prototype.onMsgView = function (msg, oldMsg, view) {
-	var html = this._getFromTempCache(msg.id);
+	var html = this._getCachedResultHtml(msg.id);
 
 	if (html) {
 		var div = this._getInfoBarDiv(view);
@@ -380,7 +380,7 @@ org_open_sw_pgp.prototype._msgVerify = function (msgContext) {
  * Remove cached result html for previously verified message
  * @param {string} msgId - Zimbra mail message id
  */
-org_open_sw_pgp.prototype._removeFromTempCache = function (msgId) {
+org_open_sw_pgp.prototype._removeCachedResultHtml = function (msgId) {
 	// If we have the necessary sessionStorage object
 	if (this.hasLocalStorage) {
 		sessionStorage.removeItem(msgId);
@@ -394,7 +394,7 @@ org_open_sw_pgp.prototype._removeFromTempCache = function (msgId) {
  * Store cached result html for previously verified message
  * @param {string} msgId - Zimbra mail message id
  */
-org_open_sw_pgp.prototype._storeInTempCache = function (msgId, HTML) {
+org_open_sw_pgp.prototype._storeCachedResultHtml = function (msgId, HTML) {
 	// If we have the necessary sessionStorage object
 	if (this.hasLocalStorage) {
 		sessionStorage.setItem(msgId, escape(HTML));
@@ -409,7 +409,7 @@ org_open_sw_pgp.prototype._storeInTempCache = function (msgId, HTML) {
  * @param {string} msgId - Zimbra mail message id
  * @return {string} result html
  */
-org_open_sw_pgp.prototype._getFromTempCache = function (msgId) {
+org_open_sw_pgp.prototype._getCachedResultHtml = function (msgId) {
 	// If we have the necessary localStorage object
 	if (this.hasLocalStorage) {
 		msgHTML = sessionStorage.getItem(msgId);
@@ -494,7 +494,7 @@ org_open_sw_pgp.prototype._displayResultBar = function (msgContext, succeeded, k
 	buttons = div.getElementsByClassName("escapeButton");
 	buttons[0].onclick = function () { zimlet._destroyInfoBar(msgContext); };
 
-	this._storeInTempCache(msgContext.mailMsgId, div.innerHTML);
+	this._storeCachedResultHtml(msgContext.mailMsgId, div.innerHTML);
 };
 
 /**
@@ -504,7 +504,7 @@ org_open_sw_pgp.prototype._displayResultBar = function (msgContext, succeeded, k
 */
 org_open_sw_pgp.prototype._destroyInfoBar = function (msgContext) {
 	document.getElementById(msgContext.divId).innerHTML = "";
-	this._removeFromTempCache(msgContext.mailMsgId);
+	this._removeCachedResultHtml(msgContext.mailMsgId);
 };
 
 /**

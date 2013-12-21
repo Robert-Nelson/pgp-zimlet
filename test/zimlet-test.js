@@ -144,7 +144,7 @@ describe('Verify clearsign msg', function() {
 		var zimlet = new org_open_sw_pgp(true, keyring);
 
 		zimlet.init();
-		zimlet._removeFromTempCache(msg.id);
+		zimlet._removeCachedResultHtml(msg.id);
 		zimlet.onMsgView(msg, null, view);
 		
 		var div = document.getElementById(view._htmlElId + '__PGP-Zimlet');
