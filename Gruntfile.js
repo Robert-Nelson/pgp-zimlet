@@ -39,8 +39,11 @@ module.exports = function(grunt) {
         jsdoc: {
             dist: {
                 src: [ 'README.md', 'pgp-zimlet.js' ],
-                dest: 'doc',
-                config: 'jsdoc.json'
+                options: {
+                    configure: 'jsdoc.json',
+                    destination: 'doc',
+                    template: "jsdoc.template"
+                }
             }
         },
         jshint: {
